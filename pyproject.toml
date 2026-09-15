@@ -1,0 +1,54 @@
+[build-system]
+requires = ["hatchling>=1.27,<2"]
+build-backend = "hatchling.build"
+
+[project]
+name = "qa-automation-starter"
+version = "0.1.0"
+description = "面向新手、可迁移的接口 / Web / Android / iOS 自动化测试框架"
+readme = "README.md"
+requires-python = ">=3.11,<3.14"
+dependencies = [
+  "pytest>=8.3,<10",
+  "pytest-playwright>=0.7,<1",
+  "playwright>=1.51,<2",
+  "httpx>=0.28,<1",
+  "Appium-Python-Client>=5.1,<7",
+  "pydantic>=2.10,<3",
+  "PyYAML>=6.0.2,<7",
+  "python-dotenv>=1.0,<2",
+  "jsonschema>=4.23,<5",
+  "pytest-html>=4.1,<5",
+  "allure-pytest>=2.13,<3",
+  "pytest-xdist>=3.6,<4",
+]
+
+[dependency-groups]
+dev = ["ruff>=0.11,<1"]
+
+[project.scripts]
+qa = "autotest.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/autotest"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra --strict-markers --strict-config --import-mode=importlib"
+markers = [
+  "unit: 框架自己的单元测试，不需要浏览器或手机",
+  "api: HTTP 接口测试",
+  "web: Playwright 浏览器测试",
+  "app: Appium 手机测试，必须显式 --run-app",
+  "smoke: 最重要的冒烟测试",
+  "regression: 回归测试",
+]
+log_cli = false
+log_level = "INFO"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "I", "B", "UP"]

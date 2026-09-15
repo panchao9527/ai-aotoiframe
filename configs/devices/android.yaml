@@ -1,0 +1,17 @@
+# Android 安装包模式。以下变量均需在 .env 或当前终端中设置。
+# APP_ANDROID_PATH 是 Appium Server 所在机器上的路径，或其可下载的 HTTP(S) URL。
+platformName: Android
+appium:automationName: UiAutomator2
+appium:deviceName: Android Test Device
+appium:udid: "${ANDROID_UDID}"
+appium:app: "${APP_ANDROID_PATH}"
+# false 表示由驱动执行默认重置流程；业务数据仍应由用例/API 明确准备。
+appium:noReset: false
+appium:newCommandTimeout: 120
+# 一台设备一组独立端口。不要让两个 worker 共用这一份配置。
+appium:systemPort: 8200
+
+# 如果 App 已预装：删除上面的 appium:app 行，改为以下两行并设置环境变量。
+# appium:appPackage: "${ANDROID_APP_PACKAGE}"
+# appium:appActivity: "${ANDROID_APP_ACTIVITY}"
+# 预装且需要保留登录状态时可考虑 noReset: true，但测试必须自行恢复状态。

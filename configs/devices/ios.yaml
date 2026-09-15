@@ -1,0 +1,18 @@
+# iOS 模拟器：使用为 Simulator 构建的 .app（或 .app.zip）。
+# iOS 真机：使用匹配设备的已签名 .ipa/.app，并完成 WDA 签名；见 docs/04-app.md。
+platformName: iOS
+appium:automationName: XCUITest
+appium:deviceName: "${IOS_DEVICE_NAME}"
+appium:udid: "${IOS_UDID}"
+appium:platformVersion: "${IOS_PLATFORM_VERSION}"
+appium:app: "${APP_IOS_PATH}"
+appium:noReset: false
+appium:newCommandTimeout: 120
+appium:wdaLocalPort: 8100
+# 真机运行时按团队证书配置启用；模拟器不需要这些签名配置。
+# appium:xcodeOrgId: "${IOS_TEAM_ID}"
+# appium:xcodeSigningId: Apple Development
+# appium:updatedWDABundleId: "${IOS_WDA_BUNDLE_ID}"
+
+# 已预装 App：删除上面的 appium:app 行，改为以下行。
+# appium:bundleId: "${IOS_BUNDLE_ID}"

@@ -1,0 +1,7 @@
+# 首次接入项目时填写测试环境地址，或者通过 .env / CI 环境变量覆盖。
+env: test
+api_base_url: https://api.test.example.com
+web_base_url: https://test.example.com
+timeout_seconds: 20
+web_timeout_ms: 10000
+

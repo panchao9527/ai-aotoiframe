@@ -1,0 +1,60 @@
+name: Python automation tests
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch:
+
+# 只需要读取代码。此工作流不发布服务、不访问公司环境和 AI。
+permissions:
+  contents: read
+
+concurrency:
+  group: automation-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  demo-tests:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      TEST_ENV: demo
+      PYTHONUTF8: "1"
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Set up uv and Python
+        uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
+        with:
+          python-version: "3.11"
+          version: "latest-known"
+          enable-cache: true
+
+      - name: Install locked dependencies
+        run: uv sync --frozen
+
+      - name: Install Chromium and Linux libraries
+        run: uv run --frozen python -m playwright install --with-deps chromium
+
+      - name: Lint
+        run: uv run --frozen ruff check .
+
+      - name: Check formatting
+        run: uv run --frozen ruff format --check .
+
+      # demo 服务自动启动；每个 worker 独立服务。App 默认 skipped。
+      - name: Run unit, API and Web tests
+        run: uv run --frozen python -m autotest run --suite all -- --env demo -n 2
+
+      - name: Upload reports and failure evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: automation-${{ github.run_id }}-${{ github.run_attempt }}
+          path: artifacts/
+          if-no-files-found: warn
+          retention-days: 7

@@ -1,0 +1,25 @@
+{
+  "notice": "教学用的模拟失败摘要，不是一次真实失败运行的报告",
+  "nodeid": "tests/api/test_items.py::test_create_item",
+  "phase": "call",
+  "environment": "test",
+  "error": "AssertionError: expected HTTP 201, got HTTP 401",
+  "request": {
+    "method": "POST",
+    "path": "/api/items",
+    "headers": {
+      "Authorization": "Bearer fake-example-token"
+    },
+    "body": {"name": "qa-example-unique-name"}
+  },
+  "response": {
+    "status": 401,
+    "body": {"error": "unauthorized"}
+  },
+  "expected": "有效测试账号登录后创建合法项目，应返回 201 和项目 id",
+  "known_facts": [
+    "当前摘要没有登录步骤的请求和响应",
+    "没有 token 有效期、权限或服务日志证据",
+    "请列出下一步核查，不要仅凭 401 就判定服务端缺陷"
+  ]
+}

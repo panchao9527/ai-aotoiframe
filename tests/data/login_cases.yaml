@@ -1,0 +1,18 @@
+# 数据与代码分离：增加一行即可增加一个测试场景；这里都是本地练习数据。
+- id: correct_credentials
+  username: demo
+  password: demo123
+  expected_status: 200
+- id: wrong_password
+  username: demo
+  password: wrong
+  expected_status: 401
+- id: unknown_user
+  username: nobody
+  password: demo123
+  expected_status: 401
+- id: empty_username
+  username: ""
+  password: demo123
+  expected_status: 401
+

@@ -1,0 +1,5 @@
+# demo 模式自动创建仅监听 127.0.0.1 的本地练习系统，端口自动分配。
+env: demo
+timeout_seconds: 10
+web_timeout_ms: 10000
+

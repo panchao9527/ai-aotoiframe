@@ -1,0 +1,7 @@
+# 仓库统一保存 LF；Windows 检出时仍由 Git/编辑器正确处理。
+* text=auto eol=lf
+*.bat text eol=crlf
+*.ps1 text eol=crlf
+*.png binary
+*.zip binary
+*.webm binary
