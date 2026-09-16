@@ -11,6 +11,12 @@ Appium Android/iOS。中文注释和 docs 面向刚开始写 Python 的测试工
 - 练习系统用例标记 `demo`，公司用例不要加 `demo`。不要自动把公司环境换回 demo。
 - 新增用例以具体预期验证业务。修复失败需基于需求或页面证据，保留有意义的断言。
 - AI 草稿保存到 `artifacts/ai/`，需要检查后再放进正式测试目录。
+- 新增用例使用 `author prepare/generate/validate/promote` 工作流；模板在
+  `templates/authoring`，项目编写与维护 Skill 在 `.agents/skills`。
+- 用户已授权编写、执行和入库时，完成业务审查和验证后持续完成，不重复索取授权。
+- 需求定义业务预期；源码与页面记录提供实现证据，冲突写入 `unresolved`。
+- 草稿执行的临时目录隔离不是安全沙箱；执行前检查代码。`promote` 只新增文件，
+  已有代码维护使用普通 Git diff 与目标回归。
 - 测试数据独立创建和清理；界面同步使用显式等待，不能用固定 sleep 掩盖问题。
 - `.env`、真实账号、Token、App 包、报告不提交；新增配置同步更新示例和中文手册。
 

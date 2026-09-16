@@ -20,10 +20,13 @@ from playwright.sync_api import expect
 from autotest.api.client import ApiClient
 from autotest.config import Settings, load_settings
 from autotest.demo import DemoServer
+from autotest.evidence import BrowserEvidence
+from autotest.execution import ExecutionTracker
 from autotest.redaction import redact
 
 SETTINGS_KEY = pytest.StashKey[Settings]()
 ARTIFACTS_KEY = pytest.StashKey[Path]()
+BROWSER_EVIDENCE_KEY = pytest.StashKey[BrowserEvidence]()
 
 
 def pytest_addoption(parser):
@@ -31,6 +34,8 @@ def pytest_addoption(parser):
     group.addoption("--env", default=None, help="configs/environments 下的环境名")
     group.addoption("--config-dir", default="configs/environments", help="环境 YAML 目录")
     group.addoption("--artifact-dir", default=None, help="本次失败证据目录")
+    group.addoption("--require-business", action="store_true", help="目标业务无实际执行时失败")
+    group.addoption("--business-kind", choices=("all", "api", "web", "app"), default="all")
 
 
 def pytest_configure(config):
@@ -45,6 +50,9 @@ def pytest_configure(config):
     path = worker.get("qa_artifacts") or config.getoption("artifact_dir") or f"artifacts/{stamp}"
     config.stash[ARTIFACTS_KEY] = Path(path).resolve()
     config.stash[ARTIFACTS_KEY].mkdir(parents=True, exist_ok=True)
+    config.pluginmanager.register(
+        ExecutionTracker(config, config.stash[ARTIFACTS_KEY]), "execution-tracker"
+    )
     config.addinivalue_line("markers", "demo: 仅适用于自带练习系统的业务示例")
     # HTTPX 默认 INFO 包含 URL；公司项目 URL 可能携带敏感查询参数。
     logging.getLogger("httpx").setLevel(logging.WARNING)
@@ -116,11 +124,12 @@ def browser_context_args(browser_context_args, settings):
 
 
 @pytest.fixture
-def page(page, settings):
+def page(page, settings, request):
     """沿用官方隔离 page fixture，仅统一动作/断言超时。"""
     page.set_default_timeout(settings.web_timeout_ms)
     page.set_default_navigation_timeout(settings.web_timeout_ms)
     expect.set_options(timeout=settings.web_timeout_ms)
+    request.node.stash[BROWSER_EVIDENCE_KEY] = BrowserEvidence(page)
     return page
 
 
@@ -150,6 +159,12 @@ def pytest_runtest_makereport(item, call):
             "artifacts": [],
             "capture_errors": [],
         }
+        browser_evidence = item.stash.get(BROWSER_EVIDENCE_KEY, None)
+        if browser_evidence is not None:
+            evidence["browser_events"] = list(browser_evidence.events)
+        client = item.funcargs.get("api_client")
+        if client is not None:
+            evidence["api_events"] = list(client.events)
         page_instance = item.funcargs.get("page")
         driver = item.funcargs.get("app_driver")
         if report.when != "teardown" and page_instance and not page_instance.is_closed():

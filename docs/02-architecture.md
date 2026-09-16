@@ -2,6 +2,12 @@
 
 框架的核心是“不同自动化共用 pytest，操作细节分开封装”。新增业务时，你主要修改测试、业务对象、数据和环境配置。
 
+AI 编写层位于 `src/autotest/authoring/`，由 context（材料）、workflow（生成协议）、
+validation（草稿检查/隔离执行/入库）组成。它使用现有 API/Web/App 执行层，
+不会将 MCP 或模型调用放进正式回归用例。模板在 `templates/authoring/`，详细流程见
+[AI 编写指南](09-authoring-workflows.md)。`execution.py` 统计实际业务执行，
+`evidence.py` 汇总浏览器/API 元数据与失败附件清单。
+
 ## 1. 一次运行经过哪些步骤
 
 ```mermaid

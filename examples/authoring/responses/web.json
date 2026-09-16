@@ -1,0 +1,16 @@
+{
+  "files": [
+    {
+      "path": "src/autotest/web/contact_page.py",
+      "content": "\"\"\"联系表单 POM：定位和操作集中，预期由测试定义。\"\"\"\nfrom playwright.sync_api import Page\n\n\nclass ContactPage:\n    def __init__(self, page: Page):\n        self.page = page\n        frame = page.frame_locator('iframe[title=\"联系表单\"]')\n        self.message = frame.get_by_label(\"留言\")\n        self.submit = frame.get_by_role(\"button\", name=\"提交留言\")\n        self.status = frame.get_by_role(\"status\")\n\n    def open(self, base_url: str) -> None:\n        self.page.goto(base_url + \"/iframe\")\n\n    def send(self, message: str) -> None:\n        self.message.fill(message)\n        self.submit.click()\n"
+    },
+    {
+      "path": "tests/web/authored_contact/test_contact.py",
+      "content": "\"\"\"录制重构后的用例只保留业务动作和准确断言。\"\"\"\nfrom uuid import uuid4\n\nimport pytest\nfrom playwright.sync_api import expect\n\nfrom autotest.web.contact_page import ContactPage\n\npytestmark = [pytest.mark.web, pytest.mark.demo]\n\n\ndef test_contact_message(page, base_url):\n    contact = ContactPage(page)\n    contact.open(base_url)\n    message = \"留言-\" + uuid4().hex[:8]\n    contact.send(message)\n    expect(contact.status).to_have_text(\"已收到：\" + message)\n"
+    }
+  ],
+  "unresolved": [],
+  "notes": [
+    "离线回复样例。使用真实 iframe，实际运行结果由 validate 产生。"
+  ]
+}

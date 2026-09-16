@@ -1,0 +1,16 @@
+{
+  "files": [
+    {
+      "path": "tests/api/authored_items/conftest.py",
+      "content": "\"\"\"场景只共享本条测试的数据，不把动态 ID 写到全局文件。\"\"\"\nfrom uuid import uuid4\n\nimport pytest\n\n\n@pytest.fixture\ndef unique_item_name():\n    return \"authoring-\" + uuid4().hex[:10]\n"
+    },
+    {
+      "path": "tests/api/authored_items/test_lifecycle.py",
+      "content": "\"\"\"由需求整理的 demo 场景，复用框架已有 Service。\"\"\"\nimport pytest\n\nfrom autotest.api.services import ItemsService\n\npytestmark = [pytest.mark.api, pytest.mark.demo, pytest.mark.regression]\n\n\ndef test_item_lifecycle(authenticated_client, unique_item_name):\n    service = ItemsService(authenticated_client)\n    created = service.create(unique_item_name)\n    assert created.status_code == 201\n    item = created.json()\n    try:\n        assert item[\"id\"]\n        assert item[\"name\"] == unique_item_name\n        fetched = service.get(item[\"id\"])\n        assert fetched.status_code == 200\n        assert fetched.json() == item\n        assert service.delete(item[\"id\"]).status_code == 204\n        assert service.get(item[\"id\"]).status_code == 404\n    finally:\n        assert service.delete(item[\"id\"]).status_code in {204, 404}\n"
+    }
+  ],
+  "unresolved": [],
+  "notes": [
+    "离线协议样例，不代表调用过在线模型。复用 ItemsService 和 authenticated_client。"
+  ]
+}

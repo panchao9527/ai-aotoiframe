@@ -1,6 +1,10 @@
-# Python 全栈自动化测试框架
+# autoiframe · AI 辅助的 API / Web / App 自动化框架
 
 用一套 Python 项目管理 **接口、Web、Android 和 iOS 自动化测试**。适合先从本地示例学会，再迁移到公司的真实业务。每个目录都有明确职责，核心代码和示例用中文注释解释。
+
+三条编写流程：**前后端源码 + OpenAPI → 接口用例**、**Playwright 探索/录制 → POM 用例**、
+**Appium 录制/设备观察 → Screen Object 用例**。AI 按模板生成多文件草稿，隔离验证后入库。
+正式回归继续使用 pytest，详见 [完整编写指南](docs/09-authoring-workflows.md)。
 
 ## 你会得到什么
 
@@ -13,7 +17,8 @@
 | 数据和环境 | YAML + 环境变量 | 本地练习与公司环境分离 |
 | 报告 | pytest-html + JUnit XML + Allure results | 人看结果、CI 汇总、后续生成 Allure 页面 |
 | 并行 | pytest-xdist | 按需增加进程，本地示例数据隔离 |
-| AI 入口 | 离线提示词 + 可配置模型接口 | 生成用例草稿、辅助分析失败，人工审查后执行 |
+| AI 编写 | 源码/契约上下文 + 模板 + 模型适配 | 单接口、业务场景、POM、Screen 多文件草稿，隔离验证与入库 |
+| 页面素材 | Playwright Codegen / MCP / CLI、Appium Inspector | 人工录制与 AI 探索使用同一生成协议 |
 | 工程质量 | uv + Ruff + CI | 锁定依赖、代码检查、自动运行和保存报告 |
 
 **交付边界：** 仓库包含可在本机运行的接口 / Web 演示系统和测试；App 提供真实驱动接入、页面对象与示例，运行需要设备 / 模拟器和被测应用。iOS 执行节点需要 macOS 与 Xcode。AI 在线调用需要你配置模型服务。GitHub Actions / Jenkins 配置需要放到你的 CI 环境首次执行验证。
@@ -76,6 +81,10 @@ uv run python -m autotest demo --port 8765
 6. [迁移到新公司 / 新项目](docs/06-new-project.md)：环境、账号、业务层、迁移验收表。
 7. [CI 与排错手册](docs/07-ci-troubleshooting.md)：GitHub Actions、Jenkins、Trace、30 天学习路线。
 8. [本次交付验证记录](docs/08-validation.md)：已运行的 122 条测试、失败附件检查和待接入范围。
+9. [AI 编写工作流](docs/09-authoring-workflows.md)：源码/接口文档、录制、模板、草稿验证与入库。
+10. [App 编写接入](docs/10-mobile-authoring.md)：Inspector 录制、Screen 生成、设备验证边界。
+11. [工具接入与失败维护](docs/11-tool-integration.md)：MCP 示例、证据汇总和已有用例维护。
+12. [重构验证记录](docs/12-refactor-validation.md)：本次重构的验证结果和交付范围。
 
 ## 维护约定
 
@@ -84,6 +93,8 @@ uv run python -m autotest demo --port 8765
 - 优先使用稳定的 label / role / test id / accessibility id；不要用固定睡眠处理页面加载。
 - `.env`、真实账号、令牌不提交到 Git；示例 YAML 只放普通配置。
 - AI 的结果先作为草稿审查；定位器变化与真实产品缺陷需要区分，修改后重新运行验证。
+- `run --suite api/web/app/all` 默认要求目标业务实际执行；全跳过返回非零。
+  初始化时可显式传 `--allow-empty`，不把框架单测当成公司业务验收。
 - 使用 `uv lock` 更新锁文件，审查依赖变更后再提交；CI 使用 `uv sync --frozen` 复现它。
 
 ## 官方参考

@@ -1,9 +1,12 @@
 """轻量 HTTPX 封装：统一地址/超时/鉴权，保留原生响应方便断言。"""
 
 import logging
+from collections import deque
 from urllib.parse import urlsplit
 
 import httpx
+
+from autotest.evidence import safe_url
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +27,7 @@ class ApiClient:
         transport: httpx.BaseTransport | None = None,
     ) -> None:
         headers = {"Authorization": f"Bearer {token}"} if token else {}
+        self.events: deque[dict] = deque(maxlen=40)
         self.raw_client = httpx.Client(
             base_url=base_url.rstrip("/") + "/",
             headers=headers,
@@ -39,6 +43,13 @@ class ApiClient:
         if parsed.scheme or parsed.netloc or path.startswith("//") or "\\" in path:
             raise ValueError("API 路径必须是相对路径，例如 /api/items")
         response = self.raw_client.request(method, path.lstrip("/"), **kwargs)
+        self.events.append(
+            {
+                "method": method.upper(),
+                "url": safe_url(str(response.url)),
+                "status": response.status_code,
+            }
+        )
         # 不记录 URL/参数/请求体/响应体，它们常含密码、手机号、Token。
         logger.info("HTTP %s -> %s", method.upper(), response.status_code)
         return response

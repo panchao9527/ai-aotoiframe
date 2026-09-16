@@ -1,0 +1,18 @@
+{
+  "files": [
+    {
+      "path": "src/autotest/mobile/profile_screen.py",
+      "content": "\"\"\"教学 Screen Object，真实定位需由 Inspector 核实。\"\"\"\nfrom appium.webdriver.common.appiumby import AppiumBy\n\nfrom autotest.mobile.screens import BaseScreen\n\n\nclass ProfileScreen(BaseScreen):\n    TAB = (AppiumBy.ACCESSIBILITY_ID, \"profile.tab\")\n    NAME = (AppiumBy.ACCESSIBILITY_ID, \"profile.display_name\")\n\n    def open(self):\n        self.tap(self.TAB)\n\n    def display_name(self):\n        return self.text(self.NAME)\n"
+    },
+    {
+      "path": "tests/app/authored_profile/test_profile.py",
+      "content": "\"\"\"在明确登录前置条件后才能接入设备运行。\"\"\"\nimport os\n\nimport pytest\n\nfrom autotest.mobile.profile_screen import ProfileScreen\n\npytestmark = pytest.mark.app\n\n\ndef test_profile_name(app_driver):\n    screen = ProfileScreen(app_driver)\n    screen.open()\n    assert screen.display_name() == os.environ[\"APP_EXPECTED_NAME\"]\n"
+    }
+  ],
+  "unresolved": [
+    "需要在真实应用确认 accessibility id、登录前置条件和 APP_EXPECTED_NAME。"
+  ],
+  "notes": [
+    "教学样例，保留未知项，静态验证应阻止入库；不算 App 业务验证。"
+  ]
+}

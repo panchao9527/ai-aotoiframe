@@ -23,6 +23,11 @@ def run_tests(suite: str, extra: list[str]) -> int:
     destination = Path("artifacts") / stamp
     destination.mkdir(parents=True)
     target = "tests" if suite == "all" else f"tests/{suite}"
+    allow_empty = "--allow-empty" in extra
+    extra = [arg for arg in extra if arg != "--allow-empty"]
+    gate = (
+        [] if suite == "unit" or allow_empty else ["--require-business", "--business-kind", suite]
+    )
     command = [
         sys.executable,
         "-m",
@@ -37,6 +42,7 @@ def run_tests(suite: str, extra: list[str]) -> int:
         "--tracing=retain-on-failure",
         "--screenshot=only-on-failure",
         "--video=retain-on-failure",
+        *gate,
         *extra,
     ]
     print(f"本次报告目录：{destination.resolve()}", flush=True)
@@ -132,6 +138,10 @@ def main(argv: list[str] | None = None) -> int:
         from autotest.ai import main as ai_main
 
         return ai_main(args[1:])
+    if args and args[0] in {"author", "record", "evidence"}:
+        from autotest.authoring.cli import main as author_main
+
+        return author_main(args)
     parser = argparse.ArgumentParser(description="Python 接口 / Web / App 自动化框架")
     sub = parser.add_subparsers(dest="command", required=True)
     run = sub.add_parser("run", help="运行测试并生成报告，-- 后可接 pytest 参数")
@@ -144,6 +154,9 @@ def main(argv: list[str] | None = None) -> int:
     new.add_argument("--name", required=True)
     new.add_argument("--output")
     sub.add_parser("ai", help="AI 用例草稿与失败分析，默认离线")
+    sub.add_parser("author", help="材料收集、多文件草稿、验证和入库")
+    sub.add_parser("record", help="Playwright 录制入口与 App 录制说明")
+    sub.add_parser("evidence", help="导出可供 AI 分析的失败证据摘要")
     options, extra = parser.parse_known_args(args)
     if extra and extra[0] == "--":
         extra = extra[1:]
