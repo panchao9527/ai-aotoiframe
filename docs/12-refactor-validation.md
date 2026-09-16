@@ -1,6 +1,7 @@
 # 12 · AI 编写工作流重构验证记录
 
-验证日期：2026-09-16。目标仓库：`panchao9527/autoiframe`。
+验证日期：2026-09-16。发布仓库：`panchao9527/ai-aotoiframe`。
+原始执行框架来自 `panchao9527/autoiframe`。
 重构基线：`70f7f7c98d054df046ffce93f434e4b71b6c453f`。
 工作分支：`codex/ai-authoring-workflows`。
 
@@ -43,7 +44,9 @@ uv run --frozen python -m autotest run --suite all -- --env demo -n 2
 | App | 0 | 0 | 1 | 未提供应用与设备，明确未执行 |
 | 合计 | **148** | **0** | **1** | 149 条收集结果，退出码 0 |
 
-本机结果目录：`artifacts/20260916-053514-6639e4/`。
+首次重构结果目录：`artifacts/20260916-053514-6639e4/`。
+GitHub 发布前复查再次运行相同集合，结果仍为 **148 passed, 1 skipped**，退出码 0；
+本机复查结果目录：`artifacts/20260916-093624-2befd4/`。
 `run.json` 记录完整执行命令与退出码；`execution.json` 记录分组执行数；
 `junit.xml` 记录 149 条结果，`report.html` 为可阅读报告。
 运行产物被 Git 忽略，不作为仓库源码提交。
@@ -83,6 +86,10 @@ uv run qa ai analyze --input artifacts/ai/refactor-triage.json --output artifact
   不代表已经在用户浏览器或真实业务上跑过 MCP 全流程。
 - Playwright 录制命令构造已检查；Web 集成测试使用维护的录制协议样例，
   不将它声称为本次人工操作录制的结果。
+- 发布前复查了新模块、入库门槛及 CI 配置；三个 GitHub Actions 的固定 SHA
+  均与官方对应版本标签一致。完整历史共检查 103 个文本/文件 blob，
+  未发现所扫描的常见密钥格式，也没有 `.env`、运行产物或虚拟环境文件入库。
+  该检查覆盖明确模式，不等价于对任意敏感内容的保证。
 
 ## 5. 接入真实项目时仍需验证
 

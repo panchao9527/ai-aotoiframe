@@ -1,4 +1,7 @@
-# autoiframe · AI 辅助的 API / Web / App 自动化框架
+# ai-aotoiframe · AI 辅助的 API / Web / App 自动化框架
+
+项目仓库：[panchao9527/ai-aotoiframe](https://github.com/panchao9527/ai-aotoiframe)。
+本项目在 autoiframe 执行框架基础上增加 AI 编写、验证和维护工作流。
 
 用一套 Python 项目管理 **接口、Web、Android 和 iOS 自动化测试**。适合先从本地示例学会，再迁移到公司的真实业务。每个目录都有明确职责，核心代码和示例用中文注释解释。
 
@@ -25,7 +28,14 @@
 
 ## 先跑通：Windows PowerShell
 
-在项目根目录打开终端，先确认电脑有 Python 3.11 和 uv。安装步骤见 [从零安装](docs/01-getting-started.md)。
+先确认电脑有 Git、Python 3.11 和 uv。安装步骤见 [从零安装](docs/01-getting-started.md)。
+
+```powershell
+git clone https://github.com/panchao9527/ai-aotoiframe.git
+cd ai-aotoiframe
+```
+
+在项目根目录执行：
 
 ```powershell
 # 1. 按锁文件安装依赖，自动创建 .venv 虚拟环境。
