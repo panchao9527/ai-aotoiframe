@@ -24,7 +24,7 @@
 | 页面素材 | Playwright Codegen / MCP / CLI、Appium Inspector | 人工录制与 AI 探索使用同一生成协议 |
 | 工程质量 | uv + Ruff + CI | 锁定依赖、代码检查、自动运行和保存报告 |
 
-**交付边界：** 仓库包含可在本机运行的接口 / Web 演示系统和测试；App 提供真实驱动接入、页面对象与示例，运行需要设备 / 模拟器和被测应用。iOS 执行节点需要 macOS 与 Xcode。AI 在线调用需要你配置模型服务。GitHub Actions / Jenkins 配置需要放到你的 CI 环境首次执行验证。
+**交付边界：** 仓库包含可在本机运行的接口 / Web 演示系统和测试；App 提供真实驱动接入、页面对象与示例，运行需要设备 / 模拟器和被测应用。iOS 执行节点需要 macOS 与 Xcode。AI 在线调用需要你配置模型服务。本仓库的 GitHub Actions 已在 Ubuntu 验证通过，见 [验证记录](docs/12-refactor-validation.md)；Jenkins 和公司环境仍需接入验收。
 
 ## 先跑通：Windows PowerShell
 

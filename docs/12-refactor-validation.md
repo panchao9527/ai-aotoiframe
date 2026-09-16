@@ -97,10 +97,23 @@ uv run qa ai analyze --input artifacts/ai/refactor-triage.json --output artifact
 2. 配置测试环境、隔离账号及可清理数据，运行生成的业务测试；本地 demo 通过不能替代公司业务验收。
 3. Web 在实际页面上核对定位器和登录态；Playwright MCP 用于探索/操作，Chrome DevTools MCP 用于诊断与取证。
 4. App 需要实际安装包、设备、Appium 驱动、定位器与业务账号；本次没有 Android/iOS 真机或模拟器执行证据。
-5. 在线模型、真实私有 Swagger 下载、用户 MCP 会话和远程 CI 运行均尚未验证。
+5. 在线模型、真实私有 Swagger 下载、用户 MCP 会话、Jenkins 和公司环境 CI 尚未验证。
 
 现有用例维护使用 Git diff 和目标回归；`promote` 仅负责新增文件，不自动覆盖人工维护代码。
 项目没有实现“失败后自动放宽断言”或无需业务证据的自动修复。
+
+## 6. GitHub 发布后验证
+
+2026-09-16，向 `panchao9527/ai-aotoiframe` 的 `main` 分支推送提交
+`3a27c63909dfcdc138f0208bb668e99210497ded` 后，仓库自带 GitHub Actions 已完成：
+
+- Ubuntu 24.04 上锁定依赖安装、Chromium 及系统库安装成功。
+- Ruff 检查和格式检查通过。
+- 框架、API 和真实浏览器测试为 **148 passed, 1 skipped**；跳过项仍为未配置设备的 App。
+- 报告和失败证据上传步骤成功。
+
+对应的 [GitHub Actions 运行记录](https://github.com/panchao9527/ai-aotoiframe/actions/runs/35080647087)
+可按提交核对。本节之后的文档补记不改变该次测试所验证的代码。
 
 使用步骤见 [AI 编写工作流](09-authoring-workflows.md)、
 [App 编写接入](10-mobile-authoring.md) 和 [工具接入与失败维护](11-tool-integration.md)。
