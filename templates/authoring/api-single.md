@@ -10,6 +10,10 @@
 - 新 fixture 放 tests/api/<name>/conftest.py，账号从配置/环境取，数据动态创建。
 - 用 yield/finally 清理本条用例创建的数据，保留主失败和清理失败各自证据。
 - 测试使用 pytest.mark.api；本地练习才加 demo。
+- 优先复用 role_clients("角色") 与业务工厂。用 data_factory.defer 登记清理，
+  必须在拿到资源 ID 后立即登记，再做业务断言；只清理本用例创建的资源。
+- 每个测试函数加 pytest.mark.case 的 id/purpose/expected/basis/source。
+  source 使用 context.materials 的键；仅依据源码时 basis="source"，不能写成需求验收。
 
 参考 tests/api/test_login.py、tests/api/test_items.py、autotest.api.services.ItemsService。
 对象已存在时 import 复用；确需新对象放 src/autotest/api/<业务名>.py。

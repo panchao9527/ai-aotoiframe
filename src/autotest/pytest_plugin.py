@@ -11,14 +11,17 @@ import logging
 import re
 import uuid
 import warnings
+from contextlib import ExitStack
 from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
 from playwright.sync_api import expect
 
+from autotest.api.auth import load_profile, role_client
 from autotest.api.client import ApiClient
 from autotest.config import Settings, load_settings
+from autotest.data import DataFactory
 from autotest.demo import DemoServer
 from autotest.evidence import BrowserEvidence
 from autotest.execution import ExecutionTracker
@@ -27,6 +30,7 @@ from autotest.redaction import redact
 SETTINGS_KEY = pytest.StashKey[Settings]()
 ARTIFACTS_KEY = pytest.StashKey[Path]()
 BROWSER_EVIDENCE_KEY = pytest.StashKey[BrowserEvidence]()
+ROLE_CLIENTS_KEY = pytest.StashKey[dict[str, ApiClient]]()
 
 
 def pytest_addoption(parser):
@@ -54,6 +58,7 @@ def pytest_configure(config):
         ExecutionTracker(config, config.stash[ARTIFACTS_KEY]), "execution-tracker"
     )
     config.addinivalue_line("markers", "demo: 仅适用于自带练习系统的业务示例")
+    config.addinivalue_line("markers", "case: 用例 ID、目的、预期和依据，供 AI 编写追溯")
     # HTTPX 默认 INFO 包含 URL；公司项目 URL 可能携带敏感查询参数。
     logging.getLogger("httpx").setLevel(logging.WARNING)
     logging.getLogger("httpcore").setLevel(logging.WARNING)
@@ -118,6 +123,61 @@ def api_client(settings, api_base_url):
         yield client
 
 
+@pytest.fixture
+def auth_profile(settings):
+    """项目可以在自己的 conftest.py 覆盖；默认从环境配置指定的 YAML 读取。"""
+    if not settings.api_auth_file:
+        raise pytest.UsageError("角色鉴权需要配置 api_auth_file / API_AUTH_FILE")
+    return load_profile(settings.api_auth_file)
+
+
+@pytest.fixture
+def role_clients(settings, request):
+    """同用例、同角色复用登录；跨用例/角色不共享 Cookie 和连接。
+
+    延迟读取配置，未使用角色鉴权的原有用例仍然兼容。不缓存全局 Token，
+    避免账户权限或登录状态在并行用例之间串用。
+    """
+    clients = {}
+    request.node.stash[ROLE_CLIENTS_KEY] = clients
+    with ExitStack() as stack:
+
+        def get(role=None):
+            profile = request.getfixturevalue("auth_profile")
+            name = role or profile.default_role
+            if name not in clients:
+                client = role_client(
+                    profile,
+                    request.getfixturevalue("api_base_url"),
+                    role=name,
+                    timeout=settings.timeout_seconds,
+                )
+                clients[name] = stack.enter_context(client)
+            return clients[name]
+
+        yield get
+
+
+@pytest.fixture
+def data_factory(request, role_clients):
+    """最后清理资源，再关闭角色客户端；清理失败独立呈现为 teardown 错误。"""
+    factory = DataFactory()
+    yield factory
+    try:
+        factory.cleanup()
+    finally:
+        # 无论清理成功/失败都记录；文件按用例实例 UUID 隔离，可用于并行运行。
+        destination = request.config.stash[ARTIFACTS_KEY] / "data-cleanup"
+        try:
+            destination.mkdir(parents=True, exist_ok=True)
+            report = {"nodeid": request.node.nodeid, "resources": factory.results}
+            (destination / f"{factory.run_id}.json").write_text(
+                json.dumps(redact(report), ensure_ascii=False, indent=2), encoding="utf-8"
+            )
+        except OSError:
+            warnings.warn("数据清理报告写入失败，原有测试和清理结果保留", stacklevel=1)
+
+
 @pytest.fixture(scope="session")
 def browser_context_args(browser_context_args, settings):
     return {**browser_context_args, "locale": "zh-CN", "timezone_id": "Asia/Shanghai"}
@@ -165,6 +225,11 @@ def pytest_runtest_makereport(item, call):
         client = item.funcargs.get("api_client")
         if client is not None:
             evidence["api_events"] = list(client.events)
+        role_clients_used = item.stash.get(ROLE_CLIENTS_KEY, {})
+        if role_clients_used:
+            evidence["api_role_events"] = {
+                role: list(client.events) for role, client in role_clients_used.items()
+            }
         page_instance = item.funcargs.get("page")
         driver = item.funcargs.get("app_driver")
         if report.when != "teardown" and page_instance and not page_instance.is_closed():

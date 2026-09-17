@@ -20,6 +20,12 @@ draft → validate → 审查 → promote → 正式 pytest 回归。
 | validation-artifacts/ | 草稿运行的失败证据 |
 | promotion.json | 实际入库文件与通过验证的指纹 |
 
+新任务使用 schema v2：每个测试函数必须有 `pytest.mark.case`，记录用例编号、目的、
+预期、依据类型和材料别名。`context.json` 的 `materials` 列出可引用来源和快照 SHA-256。
+`promote` 同时在 `tests/<kind>/case_records/<任务名>.json` 保存逐用例依据摘要，便于随 Git
+维护；不复制原始业务源码。历史 v1 草稿仍可验证，但不会自动补造依据记录。
+具体写法见 [业务接入、数据与依据](13-business-foundation.md)。
+
 prepare 不调用模型；传入 OpenAPI URL 时只下载指定文档。generate --response 导入 Agent 回复；
 generate --send 才调用 .env 的 AI_BASE_URL/AI_MODEL，复用 chat/completions 适配器。
 模型需能输出 prompt.md 规定的 files/unresolved/notes JSON。

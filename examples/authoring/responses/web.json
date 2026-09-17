@@ -6,7 +6,7 @@
     },
     {
       "path": "tests/web/authored_contact/test_contact.py",
-      "content": "\"\"\"录制重构后的用例只保留业务动作和准确断言。\"\"\"\nfrom uuid import uuid4\n\nimport pytest\nfrom playwright.sync_api import expect\n\nfrom autotest.web.contact_page import ContactPage\n\npytestmark = [pytest.mark.web, pytest.mark.demo]\n\n\ndef test_contact_message(page, base_url):\n    contact = ContactPage(page)\n    contact.open(base_url)\n    message = \"留言-\" + uuid4().hex[:8]\n    contact.send(message)\n    expect(contact.status).to_have_text(\"已收到：\" + message)\n"
+      "content": "\"\"\"录制重构后的用例只保留业务动作和准确断言。\"\"\"\nfrom uuid import uuid4\n\nimport pytest\nfrom playwright.sync_api import expect\n\nfrom autotest.web.contact_page import ContactPage\n\npytestmark = [pytest.mark.web, pytest.mark.demo]\n\n\n@pytest.mark.case(id='AUTHOR-CONTACT', purpose='iframe 留言提交', expected='状态区域显示本次提交的留言', basis=\"requirement\", source=\"requirement\")\ndef test_contact_message(page, base_url):\n    contact = ContactPage(page)\n    contact.open(base_url)\n    message = \"留言-\" + uuid4().hex[:8]\n    contact.send(message)\n    expect(contact.status).to_have_text(\"已收到：\" + message)\n"
     }
   ],
   "unresolved": [],

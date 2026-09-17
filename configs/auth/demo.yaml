@@ -1,0 +1,14 @@
+# 仅用于本机 DemoServer；测试 fixture 注入公开演示账号，不用于真实系统。
+default_role: member
+roles:
+  member:
+    mode: login
+    login_path: /api/login
+    credentials_env:
+      username: QA_DEMO_USERNAME
+      password: QA_DEMO_PASSWORD
+    token_field: token
+    success_fields:
+      user.name: demo
+  anonymous:
+    mode: none
