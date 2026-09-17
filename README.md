@@ -18,6 +18,9 @@
 | Web 测试 | Playwright + pytest-playwright | 页面对象、自动等待、iframe、失败截图和 Trace |
 | App 测试 | Appium Python Client | Android / UiAutomator2、iOS / XCUITest 接入 |
 | 数据和环境 | YAML + 环境变量 | 本地练习与公司环境分离 |
+| 数据工厂 | Python fixture + DataFactory | 动态造数、资源登记、逆序清理与失败报告 |
+| 角色鉴权 | 配置 + role_clients | 匿名、Bearer、JSON 登录，角色隔离与离线预检 |
+| 预期依据 | pytest.mark.case + 材料快照 | 区分需求、契约、源码和观察依据，入库后保留摘要 |
 | 报告 | pytest-html + JUnit XML + Allure results | 人看结果、CI 汇总、后续生成 Allure 页面 |
 | 并行 | pytest-xdist | 按需增加进程，本地示例数据隔离 |
 | AI 编写 | 源码/契约上下文 + 模板 + 模型适配 | 单接口、业务场景、POM、Screen 多文件草稿，隔离验证与入库 |
@@ -63,6 +66,9 @@ uv run python -m autotest run --suite all
 uv run python -m autotest doctor
 uv run python -m autotest --help
 
+# 项目接入配置检查（离线，不发送登录或业务请求）。
+uv run python -m autotest project check --env test
+
 # 打开浏览器看测试过程。
 uv run python -m autotest run --suite web -- --headed --browser chromium
 
@@ -95,6 +101,7 @@ uv run python -m autotest demo --port 8765
 10. [App 编写接入](docs/10-mobile-authoring.md)：Inspector 录制、Screen 生成、设备验证边界。
 11. [工具接入与失败维护](docs/11-tool-integration.md)：MCP 示例、证据汇总和已有用例维护。
 12. [重构验证记录](docs/12-refactor-validation.md)：本次重构的验证结果和交付范围。
+13. [业务接入、数据与依据](docs/13-business-foundation.md)：本轮 P0 能力、可运行样板与使用限制。
 
 ## 维护约定
 

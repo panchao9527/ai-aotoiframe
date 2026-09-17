@@ -25,12 +25,21 @@ from autotest.authoring.models import (
     workspace_path,
     write_json,
 )
+from autotest.authoring.provenance import case_records, material_versions
 from autotest.redaction import redact, redact_text
 
 
 def static_check(workspace: Path, manifest: dict) -> tuple[list[str], list[str]]:
     errors = [f"业务条件待确认：{value}" for value in manifest.get("unresolved", [])]
     tests = []
+    seen_ids = set()
+    if manifest.get("schema_version", 1) >= 2:
+        try:
+            context = json.loads((workspace / "context.json").read_text(encoding="utf-8"))
+            if material_versions(context) != manifest.get("materials"):
+                errors.append("材料快照已变化，请新建 author prepare 任务重新生成依据")
+        except (OSError, ValueError, KeyError, TypeError):
+            errors.append("缺少有效材料快照，不能验证预期依据")
     for name, path in draft_files(workspace, manifest):
         try:
             tree = ast.parse(path.read_text(encoding="utf-8"))
@@ -46,6 +55,13 @@ def static_check(workspace: Path, manifest: dict) -> tuple[list[str], list[str]]
         ]
         if is_test_file and functions:
             tests.append(name)
+            if manifest.get("schema_version", 1) >= 2:
+                records, issues = case_records(tree, name, manifest.get("materials", {}))
+                errors.extend(issues)
+                for record in records:
+                    if record["id"] in seen_ids:
+                        errors.append(f"重复 case id：{record['id']}")
+                    seen_ids.add(record["id"])
         for node in ast.walk(tree):
             if isinstance(node, ast.Call):
                 call = ast.unparse(node.func)
@@ -229,6 +245,22 @@ def promote(name: str, *, reviewed: bool = False) -> list[str]:
             raise AIError(f"目标已存在或路径含符号链接，未写入任何文件：{name}")
     if report.get("dependency_fingerprint") != dependency_fingerprint(root):
         raise AIError("项目源码、fixture 或配置已变化，请重新验证草稿。")
+    # 正式保存依据摘要，不能让它只留在被 Git 忽略的 artifacts/ 中。
+    record_path = None
+    records = []
+    if manifest.get("schema_version", 1) >= 2:
+        errors, _ = static_check(workspace, manifest)
+        if errors:
+            raise AIError("预期依据失效，请重新验证：" + "; ".join(errors))
+        for name, source in items:
+            if name.startswith("tests/") and Path(name).name.startswith("test_"):
+                found, _ = case_records(
+                    ast.parse(source.read_text(encoding="utf-8")), name, manifest["materials"]
+                )
+                records.extend(found)
+        record_path = root / "tests" / manifest["kind"] / "case_records" / f"{workspace.name}.json"
+        if record_path.exists() or record_path.resolve() != record_path:
+            raise AIError("预期依据记录目标已存在或路径含符号链接，未写入任何文件")
     written = []
     try:
         for name, source in items:
@@ -237,6 +269,13 @@ def promote(name: str, *, reviewed: bool = False) -> list[str]:
             with target.open("x", encoding="utf-8") as stream:
                 written.append(target)
                 stream.write(source.read_text(encoding="utf-8"))
+        if record_path:
+            record_path.parent.mkdir(parents=True, exist_ok=True)
+            with record_path.open("x", encoding="utf-8") as stream:
+                written.append(record_path)
+                json.dump(
+                    {"schema_version": 1, "cases": records}, stream, ensure_ascii=False, indent=2
+                )
     except OSError:
         # 仅撤回本次 x 模式新建的文件，保留所有原有文件和目录。
         for path in written:
@@ -248,6 +287,7 @@ def promote(name: str, *, reviewed: bool = False) -> list[str]:
             "files": [name for name, _ in items],
             "environment": report["environment"],
             "fingerprint": report["fingerprint"],
+            "case_records": record_path.relative_to(root).as_posix() if record_path else None,
         },
     )
     return [name for name, _ in items]

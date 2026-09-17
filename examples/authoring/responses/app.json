@@ -6,7 +6,7 @@
     },
     {
       "path": "tests/app/authored_profile/test_profile.py",
-      "content": "\"\"\"在明确登录前置条件后才能接入设备运行。\"\"\"\nimport os\n\nimport pytest\n\nfrom autotest.mobile.profile_screen import ProfileScreen\n\npytestmark = pytest.mark.app\n\n\ndef test_profile_name(app_driver):\n    screen = ProfileScreen(app_driver)\n    screen.open()\n    assert screen.display_name() == os.environ[\"APP_EXPECTED_NAME\"]\n"
+      "content": "\"\"\"在明确登录前置条件后才能接入设备运行。\"\"\"\nimport os\n\nimport pytest\n\nfrom autotest.mobile.profile_screen import ProfileScreen\n\npytestmark = pytest.mark.app\n\n\n@pytest.mark.case(id='AUTHOR-PROFILE', purpose='个人资料展示', expected='显示已明确的当前用户姓名', basis=\"requirement\", source=\"requirement\")\ndef test_profile_name(app_driver):\n    screen = ProfileScreen(app_driver)\n    screen.open()\n    assert screen.display_name() == os.environ[\"APP_EXPECTED_NAME\"]\n"
     }
   ],
   "unresolved": [

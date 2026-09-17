@@ -22,6 +22,7 @@ class Settings(BaseModel):
     api_base_url: str | None = None
     web_base_url: str | None = None
     api_token: str | None = Field(default=None, repr=False)
+    api_auth_file: str = ""  # 可选角色配置；未配置时保留原有 api_client / API_TOKEN 用法。
     timeout_seconds: float = Field(default=20, gt=0, le=300)
     web_timeout_ms: int = Field(default=10000, gt=0, le=300000)
     appium_server_url: str = "http://127.0.0.1:4723"

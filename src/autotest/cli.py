@@ -138,6 +138,10 @@ def main(argv: list[str] | None = None) -> int:
         from autotest.ai import main as ai_main
 
         return ai_main(args[1:])
+    if args and args[0] == "project":
+        from autotest.project import main as project_main
+
+        return project_main(args[1:])
     if args and args[0] in {"author", "record", "evidence"}:
         from autotest.authoring.cli import main as author_main
 
@@ -147,6 +151,7 @@ def main(argv: list[str] | None = None) -> int:
     run = sub.add_parser("run", help="运行测试并生成报告，-- 后可接 pytest 参数")
     run.add_argument("--suite", choices=["all", "unit", "api", "web", "app"], default="all")
     sub.add_parser("doctor", help="只读检查 Python 依赖和可选工具")
+    sub.add_parser("project", help="项目 API 地址和角色鉴权配置预检")
     demo = sub.add_parser("demo", help="手动启动本地练习系统，Ctrl+C 关闭")
     demo.add_argument("--port", type=int, default=8765)
     new = sub.add_parser("new", help="创建带中文注释的用例模板")

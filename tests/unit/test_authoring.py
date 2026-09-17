@@ -30,7 +30,7 @@ def author_project(tmp_path, monkeypatch):
     for name in ("pyproject.toml", "conftest.py"):
         shutil.copy2(ROOT / name, tmp_path / name)
     monkeypatch.chdir(tmp_path)
-    for key in ("API_BASE_URL", "WEB_BASE_URL", "API_TOKEN", "PYTEST_ADDOPTS"):
+    for key in ("API_BASE_URL", "WEB_BASE_URL", "API_TOKEN", "API_AUTH_FILE", "PYTEST_ADDOPTS"):
         monkeypatch.delenv(key, raising=False)
     return tmp_path
 
@@ -76,6 +76,10 @@ def test_api_draft_runs_in_overlay_and_promotion_requires_current_content(author
     dependency.write_bytes(previous)
     written = promote("sample", reviewed=True)
     assert len(written) == 2 and target.is_file()
+    case_file = author_project / "tests/api/case_records/sample.json"
+    cases = json.loads(case_file.read_text(encoding="utf-8"))["cases"]
+    assert cases[0]["id"] == "AUTHOR-ITEM-LIFECYCLE"
+    assert len(cases[0]["material"]["sha256"]) == 64
     with pytest.raises(AIError, match="已存在"):
         promote("sample", reviewed=True)
 
@@ -87,6 +91,8 @@ def test_invalid_runtime_does_not_pass_validation(author_project):
             {
                 "path": "tests/api/new_case/test_wrong.py",
                 "content": "import pytest\npytestmark = pytest.mark.api\n"
+                '@pytest.mark.case(id="WRONG", purpose="示例", expected="应该失败", '
+                'basis="requirement", source="requirement")\n'
                 "def test_wrong():\n    assert 1 == 2\n",
             }
         ]
@@ -293,7 +299,12 @@ def test_partial_runtime_skip_does_not_validate_whole_draft(author_project):
         "files": [
             {
                 "path": "tests/api/test_partial.py",
-                "content": "def test_ready():\n    assert len([1]) == 1\n"
+                "content": "import pytest\n"
+                '@pytest.mark.case(id="READY", purpose="示例", expected="执行", '
+                'basis="requirement", source="requirement")\n'
+                "def test_ready():\n    assert len([1]) == 1\n"
+                '@pytest.mark.case(id="MISSING", purpose="示例", expected="执行", '
+                'basis="requirement", source="requirement")\n'
                 "def test_missing(unavailable):\n    assert unavailable == 1\n",
             }
         ]
