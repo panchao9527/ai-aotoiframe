@@ -146,6 +146,10 @@ def main(argv: list[str] | None = None) -> int:
         from autotest.browser_cli import main as browser_main
 
         return browser_main(args[1:])
+    if args and args[0] == "artemis":
+        from autotest.mobile.artemis import main as artemis_main
+
+        return artemis_main(args[1:])
     if args and args[0] in {"author", "record", "evidence"}:
         from autotest.authoring.cli import main as author_main
 
@@ -157,6 +161,7 @@ def main(argv: list[str] | None = None) -> int:
     sub.add_parser("doctor", help="只读检查 Python 依赖和可选工具")
     sub.add_parser("project", help="项目 API 地址和角色鉴权配置预检")
     sub.add_parser("browser", help="固定版本 Playwright CLI 页面探索入口")
+    sub.add_parser("artemis", help="可选 ARTEMIS Android AI 探索入口")
     demo = sub.add_parser("demo", help="手动启动本地练习系统，Ctrl+C 关闭")
     demo.add_argument("--port", type=int, default=8765)
     new = sub.add_parser("new", help="创建带中文注释的用例模板")

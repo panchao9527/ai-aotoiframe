@@ -1,7 +1,7 @@
 # 10 · App 录制、AI 整理和设备执行
 
-App 使用 Appium，浏览器 MCP 不是原生 App 通用驱动。先完成 [App 接入](04-app.md)
-的设备、应用、账号与 capabilities 配置。
+正式 App 回归使用 Appium；Android AI 探索可选用 ARTEMIS。浏览器 MCP 不是原生 App
+通用驱动。先完成 [App 接入](04-app.md) 的设备、应用、账号与 capabilities 配置。
 
 ## 人工录制
 
@@ -26,14 +26,18 @@ uv run qa author promote profile-flow --reviewed
 
 ## AI 自主操作
 
-宿主需要提供可用的 Appium/设备工具：截图/控件树、点击、输入、滚动、context 切换。
-本项目不预装第三方 Appium MCP。有工具时项目 Skill 指引 Agent 获取素材；无工具则使用
-Inspector 录制，二者生成相同 Screen/pytest 产物。不能虚构真实设备观察结果。
+Android 默认路由为：已部署 ARTEMIS 时使用 `qa artemis` 或 ARTEMIS MCP 获取截图、层级、
+Logcat 与轨迹；没有 ARTEMIS 时使用 Appium Inspector。iOS 继续使用 Appium 工具链。
+二者最终都生成相同的 Screen/pytest 产物，不能虚构真实设备观察结果。
+
+ARTEMIS 作为独立服务部署，不与本项目 Python 环境混装。客户端安装、环境配置、设备选择、
+命令示例和安全边界见 [ARTEMIS Android AI 探索](14-artemis-integration.md)。
 
 Screen 复用 BaseScreen，定位/动作集中，业务断言留在测试。API 造数清理，设备只做目标交互。
 Android/iOS 流程可复用但不假设定位相同；多个 WebView 明确选择，单设备不多 worker。
 分别记录静态、mock、设备连接与业务执行范围。iOS 需要适合的 macOS/Xcode 执行节点，
 Windows 重构不代表完成 iOS 验收。
 
-官方参考：[Recorder](https://github.com/appium/appium-inspector/blob/main/docs/session-inspector/recorder.md)、
+官方参考：[ARTEMIS](https://github.com/google/artemis)、
+[Recorder](https://github.com/appium/appium-inspector/blob/main/docs/session-inspector/recorder.md)、
 [Context](https://appium.io/docs/en/latest/guides/context/)。

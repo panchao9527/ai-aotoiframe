@@ -6,6 +6,7 @@
 import os
 import re
 from pathlib import Path
+from typing import Literal
 from urllib.parse import urlsplit
 
 import yaml
@@ -29,6 +30,11 @@ class Settings(BaseModel):
     app_platform: str = "android"
     app_caps_file: str = ""
     app_wait_seconds: float = Field(default=15, gt=0, le=300)
+    artemis_base_url: str | None = None
+    artemis_token: str | None = Field(default=None, repr=False)
+    artemis_device_serial: str | None = None
+    artemis_profile: Literal["flash", "pro"] = "flash"
+    artemis_timeout_seconds: float = Field(default=600, gt=0, le=7200)
 
     @field_validator("api_base_url", "web_base_url", "appium_server_url")
     @classmethod
@@ -49,6 +55,22 @@ class Settings(BaseModel):
         if value.lower() not in {"android", "ios"}:
             raise ValueError("APP_PLATFORM 只支持 android 或 ios")
         return value.lower()
+
+    @field_validator("artemis_base_url")
+    @classmethod
+    def validate_artemis_url(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        parsed = urlsplit(value)
+        if parsed.scheme not in {"http", "https"} or not parsed.hostname:
+            raise ValueError("ARTEMIS_BASE_URL 必须是完整 HTTP(S) URL")
+        _ = parsed.port
+        if parsed.username or parsed.password or parsed.query or parsed.fragment:
+            raise ValueError("ARTEMIS_BASE_URL 不能包含凭据、查询参数或片段")
+        loopback = parsed.hostname.lower() in {"127.0.0.1", "localhost", "::1"}
+        if parsed.scheme == "http" and not loopback:
+            raise ValueError("远程 ARTEMIS 必须使用 HTTPS；无认证服务请通过 SSH 隧道连接 localhost")
+        return value.rstrip("/")
 
 
 def load_settings(

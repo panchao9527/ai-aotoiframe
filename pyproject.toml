@@ -23,6 +23,12 @@ dependencies = [
   "pytest-xdist>=3.6,<4",
 ]
 
+[project.optional-dependencies]
+# 仅安装零运行依赖的远程客户端。完整 ARTEMIS 服务在独立 Python 3.12+ 设备主机运行。
+artemis = [
+  "artemis-client @ git+https://github.com/google/artemis.git@371aa6df56880643da57b30da936e9812fb0ec66#subdirectory=packages/artemis-client",
+]
+
 [dependency-groups]
 dev = ["ruff>=0.11,<1"]
 
@@ -31,6 +37,10 @@ qa = "autotest.cli:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/autotest"]
+
+[tool.hatch.metadata]
+# ARTEMIS 轻量客户端尚以仓库子目录发布；固定提交保证可重复安装。
+allow-direct-references = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

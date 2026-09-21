@@ -10,6 +10,8 @@ validation（草稿检查/隔离执行/入库）组成。它使用现有 API/Web
 
 页面素材层默认使用项目固定版本的 Playwright CLI；复杂 Agent 会话可用 Playwright MCP，
 人工演示使用 Codegen。它们只产生录制/观察材料，最终代码统一转成 Page Object + pytest。
+Android 对应的可选探索层是独立 ARTEMIS 服务；它的自然语言结果只作为 observation，
+正式 App 回归仍使用 Appium Screen Object，不让模型调用进入 pytest 执行链。
 
 ## 1. 一次运行经过哪些步骤
 

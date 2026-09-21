@@ -70,3 +70,7 @@ def test_invalid_base_url(url):
 
 def test_token_not_in_settings_repr():
     assert "secret-value" not in repr(Settings(api_token="secret-value"))
+
+
+def test_artemis_token_not_in_settings_repr():
+    assert "secret-value" not in repr(Settings(artemis_token="secret-value"))

@@ -317,7 +317,15 @@ def test_partial_runtime_skip_does_not_validate_whole_draft(author_project):
 
 
 def test_all_skipped_business_returns_nonzero_even_with_passing_unit(author_project):
-    environment = {**os.environ, "PYTHONPATH": str(author_project / "src"), "PYTHONUTF8": "1"}
+    child_temp = author_project / "child-temp"
+    child_temp.mkdir()
+    environment = {
+        **os.environ,
+        "PYTHONPATH": str(author_project / "src"),
+        "PYTHONUTF8": "1",
+        "TEMP": str(child_temp),
+        "TMP": str(child_temp),
+    }
     command = [
         sys.executable,
         "-m",

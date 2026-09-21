@@ -40,8 +40,17 @@ def test_teardown(broken_teardown):
         encoding="utf-8",
     )
     artifact_dir = tmp_path / "evidence"
+    child_temp = tmp_path / "child-temp"
+    child_temp.mkdir()
     config_dir = Path(__file__).resolve().parents[2] / "configs" / "environments"
-    environment = {**os.environ, "PYTEST_DISABLE_PLUGIN_AUTOLOAD": "1", "TEST_ENV": "demo"}
+    environment = {
+        **os.environ,
+        "PYTEST_DISABLE_PLUGIN_AUTOLOAD": "1",
+        "TEST_ENV": "demo",
+        # xdist worker 中的嵌套 pytest 使用独立临时根，避免并行清理 Playwright 临时目录。
+        "TEMP": str(child_temp),
+        "TMP": str(child_temp),
+    }
     process = subprocess.run(
         [
             sys.executable,
