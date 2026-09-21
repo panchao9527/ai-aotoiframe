@@ -20,6 +20,8 @@ Appium Android/iOS。中文注释和 docs 面向刚开始写 Python 的测试工
 - 测试数据独立创建和清理；界面同步使用显式等待，不能用固定 sleep 掩盖问题。
 - AI 页面探索默认使用 `qa browser --session <任务名>` 的固定 Playwright CLI；复杂长会话才用
   Playwright MCP，网络/控制台/性能深度诊断才用 Chrome DevTools MCP。临时 ref 不进入 POM。
+- Android AI 探索可用独立 ARTEMIS 主机；必须明确测试设备和 package，结果仅作 observation。
+  正式 App 用例仍使用 Appium；不自动安装 Helper、修改全局 MCP 或操作个人手机。
 - `.env`、真实账号、Token、App 包、报告不提交；新增配置同步更新示例和中文手册。
 
 ## 本地验证

@@ -64,6 +64,11 @@ wheels = [
 ]
 
 [[package]]
+name = "artemis-client"
+version = "0.1.0"
+source = { git = "https://github.com/google/artemis.git?subdirectory=packages%2Fartemis-client&rev=371aa6df56880643da57b30da936e9812fb0ec66#371aa6df56880643da57b30da936e9812fb0ec66" }
+
+[[package]]
 name = "attrs"
 version = "26.1.0"
 source = { registry = "https://pypi.org/simple" }
@@ -718,6 +723,11 @@ dependencies = [
     { name = "pyyaml" },
 ]
 
+[package.optional-dependencies]
+artemis = [
+    { name = "artemis-client" },
+]
+
 [package.dev-dependencies]
 dev = [
     { name = "ruff" },
@@ -727,6 +737,7 @@ dev = [
 requires-dist = [
     { name = "allure-pytest", specifier = ">=2.13,<3" },
     { name = "appium-python-client", specifier = ">=5.1,<7" },
+    { name = "artemis-client", marker = "extra == 'artemis'", git = "https://github.com/google/artemis.git?subdirectory=packages%2Fartemis-client&rev=371aa6df56880643da57b30da936e9812fb0ec66" },
     { name = "httpx", specifier = ">=0.28,<1" },
     { name = "jsonschema", specifier = ">=4.23,<5" },
     { name = "playwright", specifier = ">=1.51,<2" },
@@ -738,6 +749,7 @@ requires-dist = [
     { name = "python-dotenv", specifier = ">=1.0,<2" },
     { name = "pyyaml", specifier = ">=6.0.2,<7" },
 ]
+provides-extras = ["artemis"]
 
 [package.metadata.requires-dev]
 dev = [{ name = "ruff", specifier = ">=0.11,<1" }]

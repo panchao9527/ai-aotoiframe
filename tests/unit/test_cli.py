@@ -43,3 +43,12 @@ def test_browser_arguments_are_forwarded_to_project_wrapper(monkeypatch):
     monkeypatch.setattr(browser_cli, "main", lambda args: calls.append(args) or 8)
     assert main(["browser", "--session", "order", "snapshot"]) == 8
     assert calls == [["--session", "order", "snapshot"]]
+
+
+def test_artemis_arguments_are_forwarded_to_optional_client(monkeypatch):
+    import autotest.mobile.artemis as artemis
+
+    calls = []
+    monkeypatch.setattr(artemis, "main", lambda args: calls.append(args) or 9)
+    assert main(["artemis", "--env", "test", "devices"]) == 9
+    assert calls == [["--env", "test", "devices"]]

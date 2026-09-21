@@ -17,6 +17,7 @@
 | 接口测试 | HTTPX + JSON Schema | 请求、鉴权、业务断言、结构校验 |
 | Web 测试 | Playwright + pytest-playwright | 页面对象、自动等待、iframe、失败截图和 Trace |
 | App 测试 | Appium Python Client | Android / UiAutomator2、iOS / XCUITest 接入 |
+| Android AI 探索 | ARTEMIS 可选远程客户端 / MCP | 自然语言操作、设备诊断和素材采集，正式回归仍用 Appium |
 | 数据和环境 | YAML + 环境变量 | 本地练习与公司环境分离 |
 | 数据工厂 | Python fixture + DataFactory | 动态造数、资源登记、逆序清理与失败报告 |
 | 角色鉴权 | 配置 + role_clients | 匿名、Bearer、JSON 登录，角色隔离与离线预检 |
@@ -71,6 +72,11 @@ uv run qa browser --session item-flow open http://127.0.0.1:8765/items --headed
 uv run qa browser --session item-flow snapshot
 uv run qa browser --session item-flow close
 
+# 可选 ARTEMIS 客户端；完整服务在独立 Android 设备主机运行。
+uv sync --extra artemis --frozen
+uv run qa artemis --env test check
+uv run qa artemis --env test devices
+
 # 项目接入配置检查（离线，不发送登录或业务请求）。
 uv run python -m autotest project check --env test
 
@@ -107,6 +113,7 @@ uv run python -m autotest demo --port 8765
 11. [工具接入与失败维护](docs/11-tool-integration.md)：MCP 示例、证据汇总和已有用例维护。
 12. [重构验证记录](docs/12-refactor-validation.md)：本次重构的验证结果和交付范围。
 13. [业务接入、数据与依据](docs/13-business-foundation.md)：本轮 P0 能力、可运行样板与使用限制。
+14. [ARTEMIS Android AI 探索](docs/14-artemis-integration.md)：独立部署、设备探索、MCP 与 Appium 回归边界。
 
 ## 维护约定
 

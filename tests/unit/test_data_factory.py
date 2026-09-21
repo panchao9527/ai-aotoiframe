@@ -77,11 +77,15 @@ def test_failure(data_factory):
         encoding="utf-8",
     )
     root = Path(__file__).resolve().parents[2]
+    child_temp = tmp_path / "child-temp"
+    child_temp.mkdir()
     environment = {
         **os.environ,
         "PYTEST_DISABLE_PLUGIN_AUTOLOAD": "1",
         "PYTHONUTF8": "1",
         "PYTHONPATH": str(root / "src"),
+        "TEMP": str(child_temp),
+        "TMP": str(child_temp),
     }
     environment.pop("PYTEST_ADDOPTS", None)
     result = subprocess.run(
