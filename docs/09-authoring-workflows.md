@@ -76,9 +76,18 @@ uv run qa record web --name contact-record --url http://127.0.0.1:8765/iframe
 关闭窗口后检查 artifacts/recordings/contact-record.py。原始录制可能含输入账号/数据，不提交 Git。
 --storage-state 可使用已有登录态，状态文件不会进入 AI 上下文；--print-command 只打印不启动浏览器。
 
-AI 操作时通过宿主 Playwright MCP/CLI 观察页面，把 URL 路径、iframe、真实 locator、
-观察行为、需求预期和未知项记录到 observation.md，通过 --observation 提供。
+AI 操作时默认通过项目 `qa browser` 入口调用固定版本 Playwright CLI。每个任务使用独立的
+`--session`，把 URL 路径、iframe、真实 locator、观察行为、需求预期和未知项记录到
+observation.md，通过 --observation 提供。需要长时间自主探索时可切换 Playwright MCP，
+网络/控制台/性能深度诊断再使用 Chrome DevTools MCP。
 工具在编程助手一侧，正式测试继续用 Python page fixture。
+
+```powershell
+uv run qa browser --session contact-flow open http://127.0.0.1:8765/iframe --headed
+uv run qa browser --session contact-flow snapshot
+# 页面发生显著变化后再次 snapshot；结束后关闭本任务会话。
+uv run qa browser --session contact-flow close
+```
 
 可直接验证附带 iframe 样例：
 

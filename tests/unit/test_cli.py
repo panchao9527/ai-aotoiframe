@@ -34,3 +34,12 @@ def test_pytest_arguments_are_forwarded_without_shell(monkeypatch):
     monkeypatch.setattr(cli, "run_tests", lambda suite, extra: calls.append((suite, extra)) or 7)
     assert main(["run", "--suite", "api", "--", "-n", "2", "-m", "smoke"]) == 7
     assert calls == [("api", ["-n", "2", "-m", "smoke"])]
+
+
+def test_browser_arguments_are_forwarded_to_project_wrapper(monkeypatch):
+    import autotest.browser_cli as browser_cli
+
+    calls = []
+    monkeypatch.setattr(browser_cli, "main", lambda args: calls.append(args) or 8)
+    assert main(["browser", "--session", "order", "snapshot"]) == 8
+    assert calls == [["--session", "order", "snapshot"]]

@@ -24,7 +24,7 @@
 | 报告 | pytest-html + JUnit XML + Allure results | 人看结果、CI 汇总、后续生成 Allure 页面 |
 | 并行 | pytest-xdist | 按需增加进程，本地示例数据隔离 |
 | AI 编写 | 源码/契约上下文 + 模板 + 模型适配 | 单接口、业务场景、POM、Screen 多文件草稿，隔离验证与入库 |
-| 页面素材 | Playwright Codegen / MCP / CLI、Appium Inspector | 人工录制与 AI 探索使用同一生成协议 |
+| 页面素材 | Playwright CLI / Codegen / MCP、Appium Inspector | CLI 默认供 AI 探索，Codegen 人工录制，MCP 处理复杂长会话 |
 | 工程质量 | uv + Ruff + CI | 锁定依赖、代码检查、自动运行和保存报告 |
 
 **交付边界：** 仓库包含可在本机运行的接口 / Web 演示系统和测试；App 提供真实驱动接入、页面对象与示例，运行需要设备 / 模拟器和被测应用。iOS 执行节点需要 macOS 与 Xcode。AI 在线调用需要你配置模型服务。本仓库的 GitHub Actions 已在 Ubuntu 验证通过，见 [验证记录](docs/12-refactor-validation.md)；Jenkins 和公司环境仍需接入验收。
@@ -65,6 +65,11 @@ uv run python -m autotest run --suite all
 # 查看环境诊断与帮助。
 uv run python -m autotest doctor
 uv run python -m autotest --help
+
+# AI 页面探索：项目固定 CLI 版本，每个任务使用独立会话。
+uv run qa browser --session item-flow open http://127.0.0.1:8765/items --headed
+uv run qa browser --session item-flow snapshot
+uv run qa browser --session item-flow close
 
 # 项目接入配置检查（离线，不发送登录或业务请求）。
 uv run python -m autotest project check --env test

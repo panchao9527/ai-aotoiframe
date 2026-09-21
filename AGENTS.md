@@ -18,6 +18,8 @@ Appium Android/iOS。中文注释和 docs 面向刚开始写 Python 的测试工
 - 草稿执行的临时目录隔离不是安全沙箱；执行前检查代码。`promote` 只新增文件，
   已有代码维护使用普通 Git diff 与目标回归。
 - 测试数据独立创建和清理；界面同步使用显式等待，不能用固定 sleep 掩盖问题。
+- AI 页面探索默认使用 `qa browser --session <任务名>` 的固定 Playwright CLI；复杂长会话才用
+  Playwright MCP，网络/控制台/性能深度诊断才用 Chrome DevTools MCP。临时 ref 不进入 POM。
 - `.env`、真实账号、Token、App 包、报告不提交；新增配置同步更新示例和中文手册。
 
 ## 本地验证
