@@ -8,6 +8,9 @@ validation（草稿检查/隔离执行/入库）组成。它使用现有 API/Web
 [AI 编写指南](09-authoring-workflows.md)。`execution.py` 统计实际业务执行，
 `evidence.py` 汇总浏览器/API 元数据与失败附件清单。
 
+页面素材层默认使用项目固定版本的 Playwright CLI；复杂 Agent 会话可用 Playwright MCP，
+人工演示使用 Codegen。它们只产生录制/观察材料，最终代码统一转成 Page Object + pytest。
+
 ## 1. 一次运行经过哪些步骤
 
 ```mermaid

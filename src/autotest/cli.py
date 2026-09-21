@@ -85,7 +85,7 @@ def doctor() -> int:
             print(f"[{'OK' if installed else '未安装'}] Chromium")
             if not installed:
                 print("  Web 测试前运行：python -m playwright install chromium")
-    for name in ("node", "npm", "adb", "java", "appium", "allure"):
+    for name in ("node", "npm", "npx", "adb", "java", "appium", "allure"):
         print(f"[可选工具] {name}: {shutil.which(name) or '未发现（仅相关功能需要）'}")
     print("App 真机、Appium 驱动、Xcode/WDA 未在此检查中验证；见 docs/04-app.md。")
     print("基础 Python 依赖检查完成；网络连通性、业务账号和 AI 模型需接入项目后验证。")
@@ -142,6 +142,10 @@ def main(argv: list[str] | None = None) -> int:
         from autotest.project import main as project_main
 
         return project_main(args[1:])
+    if args and args[0] == "browser":
+        from autotest.browser_cli import main as browser_main
+
+        return browser_main(args[1:])
     if args and args[0] in {"author", "record", "evidence"}:
         from autotest.authoring.cli import main as author_main
 
@@ -152,6 +156,7 @@ def main(argv: list[str] | None = None) -> int:
     run.add_argument("--suite", choices=["all", "unit", "api", "web", "app"], default="all")
     sub.add_parser("doctor", help="只读检查 Python 依赖和可选工具")
     sub.add_parser("project", help="项目 API 地址和角色鉴权配置预检")
+    sub.add_parser("browser", help="固定版本 Playwright CLI 页面探索入口")
     demo = sub.add_parser("demo", help="手动启动本地练习系统，Ctrl+C 关闭")
     demo.add_argument("--port", type=int, default=8765)
     new = sub.add_parser("new", help="创建带中文注释的用例模板")

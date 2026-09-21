@@ -61,6 +61,31 @@ uv run python -m autotest run --suite web -- --headed
 
 Playwright 升级后要重新安装对应浏览器。公司的下载代理、证书或防火墙限制，需要按公司网络规范配置，具体提示见 [Playwright 浏览器管理](https://playwright.dev/python/docs/browsers)。
 
+### AI 操作页面需要 Node.js
+
+正式 Python Web 回归不要求 Node.js。只有让 AI 使用项目 Playwright CLI 探索页面时才需要
+Node.js 20+ 和 npm/npx。安装公司允许的 Node.js 后检查：
+
+```powershell
+node --version
+npm --version
+npx --version
+
+# 框架固定 CLI 版本，不要求 npm 全局安装。
+uv run qa browser --session check -- --version
+```
+
+项目默认使用本机 Chrome。没有 Chrome 或需要开源 Chromium 时，先安装 CLI 对应浏览器，
+随后在 `open` 命令增加 `--browser=chromium`：
+
+```powershell
+uv run qa browser --session check install-browser chromium
+uv run qa browser --session item-flow open https://test.example.com --browser=chromium
+```
+
+CLI 与 Python Playwright 可能需要不同浏览器版本，不能以 Python Chromium 已安装推断 CLI
+浏览器也可用。更多命令和工具选择见 [浏览器工具接入](11-tool-integration.md)。
+
 ## 5. macOS / Linux
 
 安装 Python 3.11 与 uv 后，其余 `uv run ...` 命令相同。Linux 上通常还需要浏览器的系统依赖：

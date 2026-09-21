@@ -1,0 +1,27 @@
+{
+  "browser": {
+    "isolated": true,
+    "contextOptions": {
+      "locale": "zh-CN",
+      "timezoneId": "Asia/Shanghai",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      }
+    }
+  },
+  "outputDir": "artifacts/playwright-cli",
+  "outputMaxSize": 52428800,
+  "imageResponses": "omit",
+  "snapshot": {
+    "mode": "full",
+    "boxes": false
+  },
+  "codegen": "python",
+  "timeouts": {
+    "action": 10000,
+    "navigation": 60000,
+    "expect": 10000,
+    "settle": 500
+  }
+}
