@@ -9,7 +9,8 @@ description: 根据前后端源码、OpenAPI 和需求，在 autoiframe 中生�
 templates/authoring/api-single.md 或 api-scenario.md。
 
 1. 明确需求、目标环境、接口范围。源码和 OpenAPI 冲突时记录差异，不能以实现代替预期。
-2. 使用 author prepare，传入需求、原始 OpenAPI 和明确源码文件/模块。目录需要 --match。
+2. 使用 author prepare，传入需求、原始 OpenAPI 或 Swagger UI 页面地址，以及明确源码文件/模块。
+   多文档组使用 --spec-group；目录源码需要 --match。不要把网页片段或临时参数当业务预期。
 3. 读取 context.json 与 prompt.md，从签名索引找已有对象，再按需读取有关源码/fixture。
    一条独立场景中传递动态 ID，不依赖其他 test 的运行顺序。
 4. 生成 files/unresolved/notes JSON，保存 response.json，通过 author generate --response 导入。

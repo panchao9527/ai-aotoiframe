@@ -233,6 +233,55 @@ def test_openapi_url_reads_explicit_auth_without_following_redirects(monkeypatch
     assert len(seen) == 1
 
 
+def test_prepare_cli_accepts_swagger_ui_and_selected_group(author_project, monkeypatch):
+    original_client = httpx.Client
+
+    def handle(request):
+        if request.url.path == "/swagger-ui.html":
+            return httpx.Response(200, text="<html>Swagger UI</html>")
+        if request.url.path == "/v3/api-docs/swagger-config":
+            return httpx.Response(
+                200,
+                json={
+                    "urls": [
+                        {"name": "items", "url": "/v3/api-docs/items"},
+                        {"name": "other", "url": "/v3/api-docs/other"},
+                    ]
+                },
+            )
+        assert request.url.path == "/v3/api-docs/items"
+        return httpx.Response(
+            200, json=json.loads(Path("examples/authoring/openapi.json").read_text())
+        )
+
+    monkeypatch.setattr(
+        "autotest.authoring.context.httpx.Client",
+        lambda **kwargs: original_client(transport=httpx.MockTransport(handle), **kwargs),
+    )
+    assert (
+        main(
+            [
+                "author",
+                "prepare",
+                "swagger-flow",
+                "--kind",
+                "api",
+                "--requirement",
+                "examples/authoring/api-requirement.md",
+                "--openapi",
+                "https://docs.example.test/swagger-ui.html#/",
+                "--spec-group",
+                "items",
+                "--operation",
+                "POST /api/items",
+            ]
+        )
+        == 0
+    )
+    context = json.loads((author_project / "artifacts/ai/swagger-flow/context.json").read_text())
+    assert list(context["openapi"]["paths"]) == ["/api/items"]
+
+
 def test_source_scope_and_prompt_do_not_read_unselected_secrets(author_project):
     source = author_project / "backend"
     source.mkdir()
