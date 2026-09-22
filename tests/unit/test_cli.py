@@ -1,10 +1,12 @@
 """模板输出约束与入口转发测试。"""
 
 import ast
+import json
+import subprocess
 
 import pytest
 
-from autotest.cli import main, new_test
+from autotest.cli import main, new_test, run_tests
 
 pytestmark = pytest.mark.unit
 
@@ -52,3 +54,31 @@ def test_artemis_arguments_are_forwarded_to_optional_client(monkeypatch):
     monkeypatch.setattr(artemis, "main", lambda args: calls.append(args) or 9)
     assert main(["artemis", "--env", "test", "devices"]) == 9
     assert calls == [["--env", "test", "devices"]]
+
+
+def test_run_command_tees_redacted_console_and_records_log_paths(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+
+    class Process:
+        stdout = iter(["starting\n", "password='console-secret'\n"])
+
+        @staticmethod
+        def wait():
+            return 5
+
+    calls = []
+
+    def popen(command, **options):
+        calls.append((command, options))
+        return Process()
+
+    monkeypatch.setattr("autotest.cli.subprocess.Popen", popen)
+    assert run_tests("unit", ["-q"]) == 5
+    run_directory = next((tmp_path / "artifacts").iterdir())
+    console = (run_directory / "console.log").read_text(encoding="utf-8")
+    assert "console-secret" not in console and "[REDACTED]" in console
+    metadata = json.loads((run_directory / "run.json").read_text(encoding="utf-8"))
+    assert metadata["exit_code"] == 5
+    assert metadata["logs"]["events"] == "events.jsonl"
+    assert calls[0][1]["stderr"] is subprocess.STDOUT
+    assert "shell" not in calls[0][1]

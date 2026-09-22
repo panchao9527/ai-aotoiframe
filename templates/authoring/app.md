@@ -15,5 +15,7 @@ Android 可使用 ARTEMIS 探索结果，Appium Inspector 支持的交互可录�
 - ARTEMIS 的坐标、临时控件索引和模型推断仅作探索证据；优先从层级信息提取
   accessibility id/resource-id，无法稳定定位时写入 unresolved，不把坐标直接固化进 Screen。
 - ARTEMIS 结果使用 observation 输入，正式草稿仍只能生成 Appium Screen Object 和 pytest。
+- 长流程可用 `log_step` 记录关键阶段；Appium 会话、截图和页面 XML 由框架取证，步骤日志
+  不记录密码、Token、完整页面文本或个人隐私。
 
 已有 LoginScreen 是定位契约示例，不能未经确认认定任意真实 App 使用相同标识。

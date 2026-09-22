@@ -8,7 +8,9 @@ from typing import Any
 import pytest
 from appium.webdriver.webdriver import WebDriver
 
+from autotest.evidence import safe_url
 from autotest.mobile.driver import MobileConfigurationError, driver_session, load_capabilities
+from autotest.run_logging import emit_event
 
 
 def pytest_addoption(parser: pytest.Parser) -> None:
@@ -64,7 +66,30 @@ def app_driver(request: pytest.FixtureRequest, settings: Any) -> Iterator[WebDri
             raise MobileConfigurationError("--run-app 需要 --appium-url 或 APPIUM_SERVER_URL")
         capabilities = load_capabilities(caps_path, platform)
     except MobileConfigurationError as exc:
+        emit_event("app.configuration", str(exc), level="ERROR", platform=platform)
         pytest.fail(str(exc), pytrace=False)
     # 连接失败保留 Appium 原始错误；不把服务不可达、包安装失败等情况标记为 skip。
-    with driver_session(server_url, platform, capabilities) as driver:
-        yield driver
+    emit_event(
+        "app.session.connecting",
+        "connecting to Appium",
+        platform=platform,
+        server=safe_url(server_url),
+    )
+    connected = False
+    try:
+        with driver_session(server_url, platform, capabilities) as driver:
+            connected = True
+            emit_event("app.session.started", "Appium session started", platform=platform)
+            yield driver
+    except Exception as exc:
+        emit_event(
+            "app.session.error",
+            "Appium session failed",
+            level="ERROR",
+            platform=platform,
+            error_type=type(exc).__name__,
+        )
+        raise
+    finally:
+        if connected:
+            emit_event("app.session.closed", "Appium session closed", platform=platform)

@@ -125,6 +125,11 @@ py -3.11 -m venv .venv
 
 ```text
 artifacts/<UTC时间-随机后缀>/
+├── console.log             # 终端输出的脱敏副本
+├── run.log                 # 人工阅读的统一事件日志
+├── events.jsonl            # AI/脚本处理的结构化事件
+├── log-summary.json        # 事件、警告、错误计数
+├── logs/                   # xdist worker 原始事件分片
 ├── report.html             # 可直接打开的测试报告
 ├── junit.xml               # CI 汇总文件
 ├── run.json                # 本次命令、套件、退出码

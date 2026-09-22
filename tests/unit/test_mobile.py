@@ -242,7 +242,10 @@ def test_only_app_marked_tests_skip_by_default():
     ("caps_file", "server_url", "error"),
     [("", "http://127.0.0.1:4723", "app-caps"), ("device.yaml", "", "appium-url")],
 )
-def test_explicit_app_run_with_missing_config_fails_not_skips(caps_file, server_url, error):
+def test_explicit_app_run_with_missing_config_fails_not_skips(
+    caps_file, server_url, error, monkeypatch
+):
+    monkeypatch.setattr(plugin, "emit_event", lambda *args, **kwargs: None)
     settings = SimpleNamespace(
         app_platform="android", app_caps_file=caps_file, appium_server_url=server_url
     )
@@ -265,6 +268,8 @@ def test_cli_overrides_settings_and_fixture_always_closes_session(monkeypatch):
     monkeypatch.setattr(mobile_driver, "create_driver", create)
     load = MagicMock(return_value=android_caps())
     monkeypatch.setattr(plugin, "load_capabilities", load)
+    events = []
+    monkeypatch.setattr(plugin, "emit_event", lambda name, *args, **kwargs: events.append(name))
     settings = SimpleNamespace(
         app_platform="ios", app_caps_file="old.yaml", appium_server_url="http://old:4723"
     )
@@ -279,12 +284,15 @@ def test_cli_overrides_settings_and_fixture_always_closes_session(monkeypatch):
     create.assert_called_once_with("http://new:4723", "android", android_caps())
     fixture.close()
     driver.quit.assert_called_once_with()
+    assert events == ["app.session.connecting", "app.session.started", "app.session.closed"]
 
 
 def test_explicit_app_run_propagates_connection_failure(monkeypatch):
     create = MagicMock(side_effect=ConnectionError("Appium unreachable"))
     monkeypatch.setattr(mobile_driver, "create_driver", create)
     monkeypatch.setattr(plugin, "load_capabilities", lambda *args: android_caps())
+    events = []
+    monkeypatch.setattr(plugin, "emit_event", lambda name, *args, **kwargs: events.append(name))
     settings = SimpleNamespace(
         app_platform="android",
         app_caps_file="device.yaml",
@@ -293,3 +301,4 @@ def test_explicit_app_run_propagates_connection_failure(monkeypatch):
     fixture = plugin.app_driver.__wrapped__(SimpleNamespace(config=fake_config()), settings)
     with pytest.raises(ConnectionError, match="Appium unreachable"):
         next(fixture)
+    assert events == ["app.session.connecting", "app.session.error"]

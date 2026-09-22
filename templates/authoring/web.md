@@ -12,6 +12,8 @@
 6. 使用 Playwright expect 等待可观察状态，必要时 expect_response 与动作配对。
 7. 断言留测试中，除了提示文字，还验证当前需求的对象、状态、数量或接口结果。
 8. CLI/MCP 当前页面行为是实现证据，不自动成为需求预期；冲突写入 unresolved。
+9. 长流程可用 `log_step` 记录登录后导航、提交、最终核对等业务阶段；页面点击细节由
+   Playwright Trace 负责，不逐次重复记录，也不在步骤参数中保存输入的隐私内容。
 
 新对象放 src/autotest/web/<业务名>.py，测试与 fixture 放 tests/web/<name>/。
 测试使用 pytest.mark.web；公司业务禁止 demo 标记。参考 tests/web/test_items.py。

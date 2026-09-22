@@ -9,6 +9,7 @@ from urllib.parse import urlsplit, urlunsplit
 
 from autotest.ai import AIError, read_input
 from autotest.redaction import redact, redact_text
+from autotest.run_logging import emit_event
 
 
 def safe_url(url: str) -> str:
@@ -30,37 +31,50 @@ class BrowserEvidence:
 
     def console(self, message):
         if message.type in {"error", "warning"}:
-            self.events.append(
-                {
-                    "type": "console",
-                    "level": message.type,
-                    "message": redact_text(message.text[:2000]),
-                }
+            event = {
+                "type": "console",
+                "level": message.type,
+                "message": redact_text(message.text[:2000]),
+            }
+            self.events.append(event)
+            emit_event(
+                "web.console",
+                event["message"],
+                # Console error 可能是负向场景的预期 4xx；记录为警告，真正 pageerror/requestfailed 才是 ERROR。
+                level="WARNING",
+                console_level=message.type,
             )
 
     def error(self, error):
-        self.events.append({"type": "pageerror", "message": redact_text(str(error)[:2000])})
+        message = redact_text(str(error)[:2000])
+        self.events.append({"type": "pageerror", "message": message})
+        emit_event("web.pageerror", message, level="ERROR")
 
     def response(self, response):
         if response.request.resource_type in {"xhr", "fetch", "document"}:
-            self.events.append(
-                {
-                    "type": "response",
-                    "method": response.request.method,
-                    "url": safe_url(response.url),
-                    "status": response.status,
-                }
+            event = {
+                "type": "response",
+                "method": response.request.method,
+                "url": safe_url(response.url),
+                "status": response.status,
+            }
+            self.events.append(event)
+            emit_event(
+                "web.response",
+                f"{event['method']} -> {event['status']}",
+                level="WARNING" if response.status >= 500 else "INFO",
+                **event,
             )
 
     def failed_request(self, request):
-        self.events.append(
-            {
-                "type": "requestfailed",
-                "method": request.method,
-                "url": safe_url(request.url),
-                "error": redact_text(str(request.failure)),
-            }
-        )
+        event = {
+            "type": "requestfailed",
+            "method": request.method,
+            "url": safe_url(request.url),
+            "error": redact_text(str(request.failure)),
+        }
+        self.events.append(event)
+        emit_event("web.requestfailed", event["error"], level="ERROR", **event)
 
 
 def export_evidence(run_directory: Path, output: Path) -> Path:
