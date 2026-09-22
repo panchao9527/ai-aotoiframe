@@ -29,9 +29,10 @@ def main(argv: list[str] | None = None) -> int:
     prep.add_argument("--requirement", required=True)
     prep.add_argument("--source", action="append", default=[], help="源码文件/目录，可重复")
     prep.add_argument("--match", help="源码目录内容筛选关键字，不是正则")
-    prep.add_argument("--openapi", help="原始 JSON/YAML 文件或 URL")
+    prep.add_argument("--openapi", help="原始 JSON/YAML 或 Swagger UI 的 HTTP(S) URL")
     prep.add_argument("--operation", action="append", default=[], help="例如 'GET /api/items'")
     prep.add_argument("--spec-auth-env", help="保存文档 Authorization 头值的环境变量名")
+    prep.add_argument("--spec-group", help="Swagger UI 展示多个文档分组时指定组名")
     prep.add_argument("--recording", help="Playwright/Appium 录制的 Python")
     prep.add_argument("--observation", help="Agent 的页面观察、定位器与预期记录")
     gen = actions.add_parser("generate", help="导入 Agent 回复或显式调用模型，输出多文件草稿")
@@ -125,6 +126,7 @@ def main(argv: list[str] | None = None) -> int:
                     spec=args.openapi,
                     operations=args.operation,
                     spec_auth_env=args.spec_auth_env,
+                    spec_group=args.spec_group,
                 )
             )
         elif args.action == "generate":

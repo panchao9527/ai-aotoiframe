@@ -5,7 +5,7 @@
 
 用一套 Python 项目管理 **接口、Web、Android 和 iOS 自动化测试**。适合先从本地示例学会，再迁移到公司的真实业务。每个目录都有明确职责，核心代码和示例用中文注释解释。
 
-三条编写流程：**前后端源码 + OpenAPI → 接口用例**、**Playwright 探索/录制 → POM 用例**、
+三条编写流程：**前后端源码 + Swagger UI/OpenAPI → 接口用例**、**Playwright 探索/录制 → POM 用例**、
 **Appium 录制/设备观察 → Screen Object 用例**。AI 按模板生成多文件草稿，隔离验证后入库。
 正式回归继续使用 pytest，详见 [完整编写指南](docs/09-authoring-workflows.md)。
 

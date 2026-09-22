@@ -10,6 +10,8 @@ Appium Android/iOS。中文注释和 docs 面向刚开始写 Python 的测试工
 - 环境优先级：CLI 环境名 > TEST_ENV；系统变量 > .env > YAML > 默认值。
 - 练习系统用例标记 `demo`，公司用例不要加 `demo`。不要自动把公司环境换回 demo。
 - 新增用例以具体预期验证业务。修复失败需基于需求或页面证据，保留有意义的断言。
+- Swagger UI 可经同源文档发现接入；多分组使用 --spec-group，不猜默认业务组。文档发现
+  只读 GET，不跟随重定向，不向跨 origin 发送认证头，不调用业务接口。
 - AI 草稿保存到 `artifacts/ai/`，需要检查后再放进正式测试目录。
 - 新增用例使用 `author prepare/generate/validate/promote` 工作流；模板在
   `templates/authoring`，项目编写与维护 Skill 在 `.agents/skills`。

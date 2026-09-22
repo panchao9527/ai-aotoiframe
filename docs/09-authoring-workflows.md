@@ -26,7 +26,8 @@ draft → validate → 审查 → promote → 正式 pytest 回归。
 维护；不复制原始业务源码。历史 v1 草稿仍可验证，但不会自动补造依据记录。
 具体写法见 [业务接入、数据与依据](13-business-foundation.md)。
 
-prepare 不调用模型；传入 OpenAPI URL 时只下载指定文档。generate --response 导入 Agent 回复；
+prepare 不调用模型；传入原始 OpenAPI 时只下载该文档，传入 Swagger UI 页面时仅追加读取同源
+文档配置和规范。generate --response 导入 Agent 回复；
 generate --send 才调用 .env 的 AI_BASE_URL/AI_MODEL，复用 chat/completions 适配器。
 模型需能输出 prompt.md 规定的 files/unresolved/notes JSON。
 
@@ -36,8 +37,9 @@ validate 默认静态检查，不 import 草稿。--execute --env ENV 复制 src
 
 ## 2. 接口单接口与业务场景
 
-你提供需求 Markdown、前后端业务源码、原始 OpenAPI JSON/YAML。Swagger UI 网页本身
-不能作为契约，应提供它加载的 JSON/YAML 地址。
+你提供需求 Markdown、前后端业务源码和原始 OpenAPI JSON/YAML，或直接提供 Swagger UI 页面
+地址（包括 `swagger-ui.html#/`、`swagger-ui/index.html`）。框架会用只读 GET 查找页面背后的
+同源规范，支持 Springfox `swagger-resources` 和 springdoc `v3/api-docs/swagger-config`。
 
 以下示例不调用在线模型、不连接公司环境：
 
@@ -50,6 +52,35 @@ uv run qa author validate item-flow --execute --env demo
 uv run qa author promote item-flow --reviewed
 ```
 
+已有 Swagger UI 页面时可以直接传给 `--openapi`：
+
+```powershell
+uv run qa author prepare item-flow --kind api --mode single `
+  --requirement examples/authoring/api-requirement.md `
+  --openapi "https://sit.example.com/service/swagger-ui.html#/" `
+  --source src/autotest/demo.py `
+  --operation "POST /api/items"
+```
+
+多个文档分组会明确列出组名并停止，不会猜测。按页面中显示的组名重新执行：
+
+```powershell
+uv run qa author prepare item-sales --kind api `
+  --requirement examples/authoring/api-requirement.md `
+  --openapi "https://sit.example.com/service/swagger-ui.html#/" `
+  --spec-group "sales" `
+  --operation "POST /api/items"
+```
+
+已知道原始文档地址时也支持分组查询参数：
+
+```powershell
+uv run qa author prepare item-sales --kind api `
+  --requirement examples/authoring/api-requirement.md `
+  --openapi "https://sit.example.com/service/v2/api-docs?group=sales" `
+  --operation "POST /api/items"
+```
+
 examples/authoring/responses 是人工维护的离线协议样例，不冒充在线 AI 输出。
 真实项目由编程助手阅读 prompt.md 生成回复，或者使用 author generate item-flow --send。
 已有草稿不会被覆盖，全新生成用新的任务名；可直接修改 draft 后重新 validate。
@@ -59,7 +90,10 @@ examples/authoring/responses 是人工维护的离线协议样例，不冒充在
 单源码 128 KiB，OpenAPI 2 MiB，上下文 384 KiB，超限需缩小模块。
 --operation 可重复，保留 components/definitions，但不会自动下载外部 $ref。
 私有文档 --spec-auth-env OPENAPI_AUTHORIZATION 从环境变量读取完整认证头值，不写进材料。
-URL 不接受内嵌凭据/查询串，不跟随重定向。
+原始文档 URL 的查询串仅允许 `group`；UI 页面另允许 `url/configUrl/urls.primaryName`。
+URL 不能内嵌账号密码；UI 的 `#/` 仅用于浏览器导航，发现请求会去掉 fragment。
+发现最多发起 8 个 GET，限同 origin 文档路径，不跟随重定向、不执行页面脚本或规范列出的业务
+操作。跨域文档、自定义脚本无法识别或外部 `$ref` 的场景仍应手工导出原始 JSON/YAML。
 
 单接口选 --mode single，业务场景选 --mode scenario。
 场景在一条独立测试内传递动态 ID，用 fixture/finally 清理，不依赖其他 test 顺序。

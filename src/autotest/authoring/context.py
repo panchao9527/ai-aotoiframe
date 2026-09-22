@@ -7,15 +7,14 @@ import json
 import os
 import re
 from pathlib import Path
-from urllib.parse import urlsplit
 
 import httpx
 import yaml
 
 from autotest.ai import AIError, read_input
+from autotest.authoring.swagger_source import MAX_SPEC_BYTES, read_remote_spec
 from autotest.redaction import redact, redact_text
 
-MAX_SPEC_BYTES = 2 * 1024 * 1024
 MAX_CONTEXT_BYTES = 384 * 1024
 SOURCE_SUFFIXES = {".py", ".java", ".kt", ".js", ".jsx", ".ts", ".tsx", ".vue", ".go", ".cs"}
 EXCLUDED = {".git", ".venv", "node_modules", "target", "build", "dist", "artifacts", "__pycache__"}
@@ -90,43 +89,25 @@ def contract_material(value, sensitive: bool = False):
     return redact_text(value) if isinstance(value, str) else value
 
 
-def load_spec(source: str, operations: list[str], *, header_env: str | None = None) -> dict:
-    """读取原始 OpenAPI/Swagger JSON/YAML；不猜 Swagger UI 地址，不跟随远程 $ref。
+def load_spec(
+    source: str,
+    operations: list[str],
+    *,
+    header_env: str | None = None,
+    group: str | None = None,
+) -> dict:
+    """读取原始 OpenAPI 或发现 Swagger UI 的同源文档；不跟随远程 $ref。
 
-    内网 HTTP 文档可读取，认证头仅从指定环境变量取得，不保存到上下文。
-    下载只限用户指定 URL，不自动跟随重定向，防止文档网关把认证转给其他站点。
+    发现只读取有限的同源文档配置和规范，不执行 UI 的 JavaScript 或文档中的业务操作。
+    认证头仅从指定环境变量取得，不保存到上下文或传给跨 origin 地址。
     """
     if source.startswith(("http://", "https://")):
-        parsed = urlsplit(source)
-        if (
-            not parsed.hostname
-            or parsed.username
-            or parsed.password
-            or parsed.query
-            or parsed.fragment
-        ):
-            raise AIError("OpenAPI URL 不能含账号密码、查询串或片段；认证用 --spec-auth-env。")
-        headers = {}
+        header = None
         if header_env:
-            value = os.getenv(header_env)
-            if not value:
+            header = os.getenv(header_env)
+            if not header:
                 raise AIError(f"未设置文档认证环境变量 {header_env}")
-            headers["Authorization"] = value
-        try:
-            with httpx.Client(timeout=30, follow_redirects=False) as client:
-                with client.stream("GET", source, headers=headers) as response:
-                    if response.status_code != 200:
-                        raise AIError(
-                            f"OpenAPI 下载返回 HTTP {response.status_code}，请提供原始文档地址。"
-                        )
-                    content = bytearray()
-                    for chunk in response.iter_bytes():
-                        content.extend(chunk)
-                        if len(content) > MAX_SPEC_BYTES:
-                            raise AIError("OpenAPI 超过 2 MiB，请导出相关模块文档。")
-            text = content.decode("utf-8-sig")
-        except (httpx.HTTPError, UnicodeDecodeError) as exc:
-            raise AIError("OpenAPI 下载失败，请检查网络、编码和文档认证。") from exc
+        text = read_remote_spec(source, header=header, group=group, client_factory=httpx.Client)
     else:
         text = bounded_text(Path(source), MAX_SPEC_BYTES)
     try:
@@ -238,6 +219,7 @@ def collect_context(
     spec: str | None,
     operations: list[str],
     spec_auth_env: str | None,
+    spec_group: str | None = None,
 ) -> dict:
     context = {
         "requirement": read_input(Path(requirement)),
@@ -251,7 +233,7 @@ def collect_context(
     if observation:
         context["observation"] = read_input(Path(observation))
     if spec:
-        context["openapi"] = load_spec(spec, operations, header_env=spec_auth_env)
+        context["openapi"] = load_spec(spec, operations, header_env=spec_auth_env, group=spec_group)
     elif operations:
         raise AIError("--operation 需要同时提供 --openapi。")
     if len(json.dumps(context, ensure_ascii=False).encode()) > MAX_CONTEXT_BYTES:
