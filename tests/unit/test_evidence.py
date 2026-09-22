@@ -20,7 +20,10 @@ def test_url_does_not_expose_auth_or_query():
     )
 
 
-def test_browser_ring_buffer_and_console_redaction():
+def test_browser_ring_buffer_and_console_redaction(monkeypatch):
+    # 本测试验证环形缓冲，不应向本次真实框架运行注入 80 条模拟浏览器错误。
+    monkeypatch.setattr("autotest.evidence.emit_event", lambda *args, **kwargs: None)
+
     class Page:
         def on(self, event, callback):
             pass

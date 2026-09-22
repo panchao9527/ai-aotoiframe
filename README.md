@@ -23,6 +23,7 @@
 | 角色鉴权 | 配置 + role_clients | 匿名、Bearer、JSON 登录，角色隔离与离线预检 |
 | 预期依据 | pytest.mark.case + 材料快照 | 区分需求、契约、源码和观察依据，入库后保留摘要 |
 | 报告 | pytest-html + JUnit XML + Allure results | 人看结果、CI 汇总、后续生成 Allure 页面 |
+| 统一日志 | run.log + JSONL 事件 | API/Web/App/数据/步骤时间线，支持 xdist 合并和基础脱敏 |
 | 并行 | pytest-xdist | 按需增加进程，本地示例数据隔离 |
 | AI 编写 | 源码/契约上下文 + 模板 + 模型适配 | 单接口、业务场景、POM、Screen 多文件草稿，隔离验证与入库 |
 | 页面素材 | Playwright CLI / Codegen / MCP、Appium Inspector | CLI 默认供 AI 探索，Codegen 人工录制，MCP 处理复杂长会话 |
@@ -114,6 +115,7 @@ uv run python -m autotest demo --port 8765
 12. [重构验证记录](docs/12-refactor-validation.md)：本次重构的验证结果和交付范围。
 13. [业务接入、数据与依据](docs/13-business-foundation.md)：本轮 P0 能力、可运行样板与使用限制。
 14. [ARTEMIS Android AI 探索](docs/14-artemis-integration.md)：独立部署、设备探索、MCP 与 Appium 回归边界。
+15. [统一运行日志与排查](docs/15-unified-logging.md)：事件字段、业务步骤、查询、脱敏和并行日志。
 
 ## 维护约定
 

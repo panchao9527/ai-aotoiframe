@@ -11,6 +11,7 @@ import logging
 import re
 import uuid
 import warnings
+from collections.abc import Mapping
 from contextlib import ExitStack
 from datetime import UTC, datetime
 from pathlib import Path
@@ -25,12 +26,38 @@ from autotest.data import DataFactory
 from autotest.demo import DemoServer
 from autotest.evidence import BrowserEvidence
 from autotest.execution import ExecutionTracker
-from autotest.redaction import redact
+from autotest.redaction import REDACTED, redact, redact_text
+from autotest.run_logging import PytestRunLogging, business_step, configure_logging, emit_event
 
 SETTINGS_KEY = pytest.StashKey[Settings]()
 ARTIFACTS_KEY = pytest.StashKey[Path]()
 BROWSER_EVIDENCE_KEY = pytest.StashKey[BrowserEvidence]()
 ROLE_CLIENTS_KEY = pytest.StashKey[dict[str, ApiClient]]()
+_SAFE_PARAMETER_NAMES = {
+    "browser_name",
+    "environment",
+    "expected_status",
+    "kind",
+    "method",
+    "mode",
+    "platform",
+    "profile",
+    "status",
+    "status_code",
+}
+
+
+def _safe_report_parameter(name, value):
+    clean = redact({name: value})[name]
+    if repr(clean) != repr(value):
+        return REDACTED
+    if isinstance(value, str):
+        if name in _SAFE_PARAMETER_NAMES and re.fullmatch(r"[A-Za-z0-9_.:-]{0,100}", value):
+            return value
+        return "[HIDDEN]"
+    if isinstance(value, (bytes, Mapping, list, tuple, set)):
+        return "[HIDDEN]"
+    return clean
 
 
 def pytest_addoption(parser):
@@ -40,6 +67,12 @@ def pytest_addoption(parser):
     group.addoption("--artifact-dir", default=None, help="本次失败证据目录")
     group.addoption("--require-business", action="store_true", help="目标业务无实际执行时失败")
     group.addoption("--business-kind", choices=("all", "api", "web", "app"), default="all")
+    group.addoption(
+        "--event-log-level",
+        choices=("DEBUG", "INFO", "WARNING", "ERROR"),
+        default="INFO",
+        help="run.log/events.jsonl 最低事件级别",
+    )
 
 
 def pytest_configure(config):
@@ -54,6 +87,18 @@ def pytest_configure(config):
     path = worker.get("qa_artifacts") or config.getoption("artifact_dir") or f"artifacts/{stamp}"
     config.stash[ARTIFACTS_KEY] = Path(path).resolve()
     config.stash[ARTIFACTS_KEY].mkdir(parents=True, exist_ok=True)
+    worker_id = worker.get("workerid", "main")
+    sink, handler, previous_level, previous_sink = configure_logging(
+        config.stash[ARTIFACTS_KEY],
+        run_id=config.stash[ARTIFACTS_KEY].name,
+        environment=config.stash[SETTINGS_KEY].env,
+        worker=worker_id,
+        level=config.getoption("event_log_level"),
+    )
+    config.pluginmanager.register(
+        PytestRunLogging(config, sink, handler, previous_level, previous_sink),
+        "structured-run-logging",
+    )
     config.pluginmanager.register(
         ExecutionTracker(config, config.stash[ARTIFACTS_KEY]), "execution-tracker"
     )
@@ -62,6 +107,12 @@ def pytest_configure(config):
     # HTTPX 默认 INFO 包含 URL；公司项目 URL 可能携带敏感查询参数。
     logging.getLogger("httpx").setLevel(logging.WARNING)
     logging.getLogger("httpcore").setLevel(logging.WARNING)
+    emit_event(
+        "session.start",
+        "pytest session configured",
+        suite=config.getoption("business_kind"),
+        worker=worker_id,
+    )
 
 
 @pytest.hookimpl(optionalhook=True)
@@ -78,6 +129,29 @@ def pytest_collection_modifyitems(config, items):
                 item.add_marker(marker)
 
 
+@pytest.hookimpl(tryfirst=True)
+def pytest_make_parametrize_id(config, val, argname):
+    """自动参数 ID 不能把密码或嵌套敏感字段带进 nodeid、JUnit、HTML、Allure。"""
+    clean = _safe_report_parameter(argname, val)
+    if clean in {REDACTED, "[HIDDEN]"}:
+        return f"{argname}-redacted"
+    return None
+
+
+@pytest.hookimpl(tryfirst=True)
+def pytest_runtest_setup(item):
+    """在 Allure 自动读取 callspec 前覆盖含敏感字段的参数展示值。"""
+    callspec = getattr(item, "callspec", None)
+    if callspec is None:
+        return
+    import allure
+
+    for name, value in callspec.params.items():
+        clean = _safe_report_parameter(name, value)
+        if repr(clean) != repr(value):
+            allure.dynamic.parameter(name, clean, mode=allure.parameter_mode.MASKED)
+
+
 @pytest.hookimpl(optionalhook=True)
 def pytest_html_report_title(report):
     report.title = "自动化测试报告 · API / Web / App"
@@ -86,6 +160,12 @@ def pytest_html_report_title(report):
 @pytest.fixture(scope="session")
 def settings(pytestconfig) -> Settings:
     return pytestconfig.stash[SETTINGS_KEY]
+
+
+@pytest.fixture
+def log_step():
+    """业务步骤日志：with log_step("创建订单", order_type="normal"): ..."""
+    return business_step
 
 
 @pytest.fixture(scope="session")
@@ -162,9 +242,18 @@ def role_clients(settings, request):
 def data_factory(request, role_clients):
     """最后清理资源，再关闭角色客户端；清理失败独立呈现为 teardown 错误。"""
     factory = DataFactory()
+    emit_event("data.factory.start", "test data factory ready", run_id=factory.run_id)
     yield factory
     try:
         factory.cleanup()
+    except BaseException:
+        emit_event(
+            "data.cleanup",
+            "test data cleanup failed",
+            level="ERROR",
+            resources=factory.results,
+        )
+        raise
     finally:
         # 无论清理成功/失败都记录；文件按用例实例 UUID 隔离，可用于并行运行。
         destination = request.config.stash[ARTIFACTS_KEY] / "data-cleanup"
@@ -174,6 +263,12 @@ def data_factory(request, role_clients):
             (destination / f"{factory.run_id}.json").write_text(
                 json.dumps(redact(report), ensure_ascii=False, indent=2), encoding="utf-8"
             )
+            if not any(item.get("status") == "failed" for item in factory.results):
+                emit_event(
+                    "data.cleanup",
+                    "test data cleanup completed",
+                    resources=factory.results,
+                )
         except OSError:
             warnings.warn("数据清理报告写入失败，原有测试和清理结果保留", stacklevel=1)
 
@@ -190,6 +285,7 @@ def page(page, settings, request):
     page.set_default_navigation_timeout(settings.web_timeout_ms)
     expect.set_options(timeout=settings.web_timeout_ms)
     request.node.stash[BROWSER_EVIDENCE_KEY] = BrowserEvidence(page)
+    emit_event("web.page.ready", "Playwright page fixture ready")
     return page
 
 
@@ -207,6 +303,13 @@ def pytest_runtest_makereport(item, call):
     """在驱动清理前保留证据；附件出错也不能覆盖真正的测试失败。"""
     outcome = yield
     report = outcome.get_result()
+    # pytest-html/JUnit/终端会读取这些字段；业务代码误 print/log 敏感值时先统一脱敏。
+    report.sections = [(name, redact_text(content)) for name, content in report.sections]
+    if report.failed:
+        original = report.longreprtext
+        clean = redact_text(original)
+        if clean != original:
+            report.longrepr = clean
     if not report.failed:
         return
     try:

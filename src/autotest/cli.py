@@ -14,7 +14,7 @@ import uuid
 from datetime import UTC, datetime
 from pathlib import Path
 
-from autotest.redaction import redact
+from autotest.redaction import redact, redact_text
 
 
 def run_tests(suite: str, extra: list[str]) -> int:
@@ -47,16 +47,51 @@ def run_tests(suite: str, extra: list[str]) -> int:
     ]
     print(f"本次报告目录：{destination.resolve()}", flush=True)
     # 不用 shell=True；用户传入的是参数列表，不会作为系统命令执行。
-    result = subprocess.run(command, check=False, env={**os.environ, "PYTHONUTF8": "1"})
+    environment = {
+        **os.environ,
+        "PYTHONUTF8": "1",
+        "PYTHONUNBUFFERED": "1",
+        "AUTOTEST_RUN_ID": destination.name,
+    }
+    # 同时输出到终端和文件；文件先做基础脱敏。结构化细节由 pytest 插件写 events.jsonl。
+    with (destination / "console.log").open("w", encoding="utf-8", buffering=1) as console:
+        process = subprocess.Popen(
+            command,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            bufsize=1,
+            env=environment,
+        )
+        assert process.stdout is not None
+        for line in process.stdout:
+            print(line, end="", flush=True)
+            console.write(redact_text(line))
+        exit_code = process.wait()
     (destination / "run.json").write_text(
         json.dumps(
-            redact({"suite": suite, "command": command, "exit_code": result.returncode}),
+            redact(
+                {
+                    "run_id": destination.name,
+                    "suite": suite,
+                    "command": command,
+                    "exit_code": exit_code,
+                    "logs": {
+                        "console": "console.log",
+                        "human": "run.log",
+                        "events": "events.jsonl",
+                        "summary": "log-summary.json",
+                    },
+                }
+            ),
             ensure_ascii=False,
             indent=2,
         ),
         encoding="utf-8",
     )
-    return result.returncode
+    return exit_code
 
 
 def doctor() -> int:

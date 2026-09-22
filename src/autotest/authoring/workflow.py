@@ -31,6 +31,8 @@ API single: 参数化正常/明确的异常边界；scenario: 一个独立测试
 Web: 录制/页面观察只提供动作事实，按 Page Object 整理，使用同步 Playwright 和 page fixture。
 App: 使用 app_driver 与 BaseScreen，原生控件通过 Appium 定位；明确平台和 WebView 上下文。
 页面/Screen 对象负责定位和动作，业务断言保留在测试中。不要自行创建浏览器/设备会话。
+复杂场景可注入 log_step fixture，用 with log_step("业务阶段", 非敏感字段=值) 记录关键阶段；
+不要逐行包装，不传密码、Token、完整请求/响应正文或个人隐私。
 不要硬编码账号、环境 URL、动态 ID；不保留录制的密码。不要创建第二套 YAML 执行语言。
 新增 fixture 放 tests/<kind>/<任务名>/conftest.py，测试放同目录；公共对象使用新的模块名，
 不能覆盖现有文件。通过 import 复用现有对象。不要生成 .env、插件、依赖文件或系统命令。
