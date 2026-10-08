@@ -1,0 +1,14 @@
+"""--run-app 后才连接设备；Android/iOS 分别执行并验收。"""
+
+import pytest
+
+from autotest.mobile.company_screen import CompanyScreen
+
+pytestmark = [pytest.mark.app, pytest.mark.smoke]
+
+
+def test_company_app(smoke_config, app_driver, settings, log_step):
+    with log_step("验证公司 App 首屏"):
+        screen = CompanyScreen(app_driver, timeout=settings.app_wait_seconds)
+        landmark = screen.landmark(smoke_config["expected_accessibility_id"])
+        assert landmark.text == smoke_config["expected_text"], "App 首屏文本不符合预期"

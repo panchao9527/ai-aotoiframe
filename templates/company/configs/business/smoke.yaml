@@ -1,0 +1,16 @@
+# 根据产品需求/接口契约填写，留空会明确失败。不是公司业务已通过的证明。
+api:
+  # 仅选择可以重复调用、无副作用的 GET 接口。
+  path: null
+  expected_status: 200
+  # 支持点分嵌套字段，例如 data.status。
+  expected_field: null
+  expected_value: null
+web:
+  path: /
+  # 页面唯一且稳定的 heading 文本；受保护页面可配置 WEB_STORAGE_STATE。
+  expected_heading: null
+app:
+  # Android content-desc / iOS accessibilityIdentifier；由 Inspector 实测确认。
+  expected_accessibility_id: null
+  expected_text: null

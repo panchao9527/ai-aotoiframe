@@ -1,0 +1,200 @@
+# 复制到公司项目 .github/workflows/company-tests.yml 后按 README 配置 vars/Secrets。
+name: Company automation
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 已配置的公司 GitHub Environment（同名 YAML 必须存在）
+        type: environment
+        default: company_test
+        required: true
+      suite:
+        description: 本次实际执行的业务端
+        type: choice
+        options: [api, web, app]
+        default: api
+        required: true
+      app_platform:
+        description: App 专用；iOS 使用 macOS 设备节点
+        type: choice
+        options: [android, ios]
+        default: android
+        required: true
+
+permissions:
+  contents: read
+
+# 不开放外部 PR 触发：公司账号及自托管设备只用于受信任代码。
+concurrency:
+  group: company-${{ inputs.environment }}-${{ inputs.suite }}-${{ inputs.app_platform }}
+  cancel-in-progress: false
+
+env:
+  TEST_ENV: ${{ inputs.environment }}
+  TEST_SUITE: ${{ inputs.suite }}
+  PYTHONUTF8: '1'
+
+jobs:
+  api-web:
+    if: inputs.suite != 'app'
+    environment: ${{ inputs.environment }}
+    # 仓库变量；内网项目改为能访问被测环境的 Linux runner 标签。
+    runs-on: ${{ vars.QA_LINUX_RUNNER || 'ubuntu-24.04' }}
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
+        with:
+          python-version: '3.11'
+          version: latest-known
+          enable-cache: true
+      - name: Install locked dependencies
+        run: uv sync --frozen
+      - name: Install browser
+        if: inputs.suite == 'web'
+        # 自托管 runner 应预装系统库；托管 Ubuntu 在当前 job 安装系统库。
+        shell: bash
+        env:
+          RUNNER_KIND: ${{ runner.environment }}
+        run: |
+          if [ "$RUNNER_KIND" = "github-hosted" ]; then
+            uv run --frozen python -m playwright install --with-deps chromium
+          else
+            uv run --frozen python -m playwright install chromium
+          fi
+      - name: Preflight and run business suite
+        env:
+          CI_API_BASE_URL: ${{ vars.API_BASE_URL }}
+          CI_WEB_BASE_URL: ${{ vars.WEB_BASE_URL }}
+          CI_API_AUTH_FILE: ${{ vars.API_AUTH_FILE }}
+          CI_APPIUM_SERVER_URL: ${{ vars.APPIUM_SERVER_URL }}
+          API_TOKEN: ${{ secrets.API_TOKEN }}
+          TEST_USERNAME: ${{ secrets.TEST_USERNAME }}
+          TEST_PASSWORD: ${{ secrets.TEST_PASSWORD }}
+          TEST_OPERATOR_USERNAME: ${{ secrets.TEST_OPERATOR_USERNAME }}
+          TEST_OPERATOR_PASSWORD: ${{ secrets.TEST_OPERATOR_PASSWORD }}
+          TEST_TENANT_ID: ${{ secrets.TEST_TENANT_ID }}
+          TEST_READER_TOKEN: ${{ secrets.TEST_READER_TOKEN }}
+          APP_TEST_USERNAME: ${{ secrets.APP_TEST_USERNAME }}
+          APP_TEST_PASSWORD: ${{ secrets.APP_TEST_PASSWORD }}
+        shell: bash
+        run: >-
+          uv run --frozen python templates/company-ci/run_company_ci.py
+          --env "$TEST_ENV" --suite "$TEST_SUITE"
+      - name: Archive reports and failure evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: company-${{ inputs.suite }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: artifacts/
+          if-no-files-found: warn
+          retention-days: 7
+
+  android:
+    if: inputs.suite == 'app' && inputs.app_platform == 'android'
+    environment: ${{ inputs.environment }}
+    # 每组标签应唯一映射到测试设备；JSON 列表变量必须建在仓库级别。
+    runs-on: ${{ fromJSON(vars.QA_ANDROID_RUNNER_LABELS || '["self-hosted","Linux","qa-android-device"]') }}
+    concurrency:
+      group: company-android-device
+      cancel-in-progress: false
+    timeout-minutes: 45
+    env:
+      ANDROID_UDID: ${{ vars.ANDROID_UDID }}
+      APP_ANDROID_PATH: ${{ vars.APP_ANDROID_PATH }}
+      ANDROID_APP_PACKAGE: ${{ vars.ANDROID_APP_PACKAGE }}
+      ANDROID_APP_ACTIVITY: ${{ vars.ANDROID_APP_ACTIVITY }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
+        with:
+          python-version: '3.11'
+          version: latest-known
+          enable-cache: true
+      - run: uv sync --frozen
+      - name: Check and run Android on the designated device serially
+        env:
+          CI_API_BASE_URL: ${{ vars.API_BASE_URL }}
+          CI_WEB_BASE_URL: ${{ vars.WEB_BASE_URL }}
+          CI_API_AUTH_FILE: ${{ vars.API_AUTH_FILE }}
+          CI_APPIUM_SERVER_URL: ${{ vars.APPIUM_SERVER_URL }}
+          API_TOKEN: ${{ secrets.API_TOKEN }}
+          TEST_USERNAME: ${{ secrets.TEST_USERNAME }}
+          TEST_PASSWORD: ${{ secrets.TEST_PASSWORD }}
+          TEST_OPERATOR_USERNAME: ${{ secrets.TEST_OPERATOR_USERNAME }}
+          TEST_OPERATOR_PASSWORD: ${{ secrets.TEST_OPERATOR_PASSWORD }}
+          TEST_TENANT_ID: ${{ secrets.TEST_TENANT_ID }}
+          TEST_READER_TOKEN: ${{ secrets.TEST_READER_TOKEN }}
+          APP_TEST_USERNAME: ${{ secrets.APP_TEST_USERNAME }}
+          APP_TEST_PASSWORD: ${{ secrets.APP_TEST_PASSWORD }}
+        shell: bash
+        run: >-
+          uv run --frozen python templates/company-ci/run_company_ci.py
+          --env "$TEST_ENV" --suite app --app-platform android
+      - name: Archive reports and failure evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: company-android-${{ github.run_id }}-${{ github.run_attempt }}
+          path: artifacts/
+          if-no-files-found: warn
+          retention-days: 7
+
+  ios:
+    if: inputs.suite == 'app' && inputs.app_platform == 'ios'
+    environment: ${{ inputs.environment }}
+    runs-on: ${{ fromJSON(vars.QA_IOS_RUNNER_LABELS || '["self-hosted","macOS","qa-ios-device"]') }}
+    concurrency:
+      group: company-ios-device
+      cancel-in-progress: false
+    timeout-minutes: 60
+    env:
+      IOS_UDID: ${{ vars.IOS_UDID }}
+      IOS_DEVICE_NAME: ${{ vars.IOS_DEVICE_NAME }}
+      IOS_PLATFORM_VERSION: ${{ vars.IOS_PLATFORM_VERSION }}
+      APP_IOS_PATH: ${{ vars.APP_IOS_PATH }}
+      IOS_BUNDLE_ID: ${{ vars.IOS_BUNDLE_ID }}
+      IOS_TEAM_ID: ${{ vars.IOS_TEAM_ID }}
+      IOS_WDA_BUNDLE_ID: ${{ vars.IOS_WDA_BUNDLE_ID }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
+        with:
+          python-version: '3.11'
+          version: latest-known
+          enable-cache: true
+      - run: uv sync --frozen
+      - name: Check and run iOS on the designated device serially
+        env:
+          CI_API_BASE_URL: ${{ vars.API_BASE_URL }}
+          CI_WEB_BASE_URL: ${{ vars.WEB_BASE_URL }}
+          CI_API_AUTH_FILE: ${{ vars.API_AUTH_FILE }}
+          CI_APPIUM_SERVER_URL: ${{ vars.APPIUM_SERVER_URL }}
+          API_TOKEN: ${{ secrets.API_TOKEN }}
+          TEST_USERNAME: ${{ secrets.TEST_USERNAME }}
+          TEST_PASSWORD: ${{ secrets.TEST_PASSWORD }}
+          TEST_OPERATOR_USERNAME: ${{ secrets.TEST_OPERATOR_USERNAME }}
+          TEST_OPERATOR_PASSWORD: ${{ secrets.TEST_OPERATOR_PASSWORD }}
+          TEST_TENANT_ID: ${{ secrets.TEST_TENANT_ID }}
+          TEST_READER_TOKEN: ${{ secrets.TEST_READER_TOKEN }}
+          APP_TEST_USERNAME: ${{ secrets.APP_TEST_USERNAME }}
+          APP_TEST_PASSWORD: ${{ secrets.APP_TEST_PASSWORD }}
+        shell: bash
+        run: >-
+          uv run --frozen python templates/company-ci/run_company_ci.py
+          --env "$TEST_ENV" --suite app --app-platform ios
+      - name: Archive reports and failure evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: company-ios-${{ github.run_id }}-${{ github.run_attempt }}
+          path: artifacts/
+          if-no-files-found: warn
+          retention-days: 7

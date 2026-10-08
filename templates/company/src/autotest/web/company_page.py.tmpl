@@ -1,0 +1,19 @@
+"""公司页面对象：将定位与动作集中在这里。"""
+
+from urllib.parse import urlsplit
+
+from playwright.sync_api import Page
+
+
+class CompanyPage:
+    def __init__(self, page: Page):
+        self.page = page
+
+    def open(self, base_url: str, path: str):
+        parsed = urlsplit(path)
+        if parsed.scheme or parsed.netloc or "\\" in path:
+            raise ValueError("页面路径必须是公司站点内的相对路径")
+        self.page.goto(base_url.rstrip("/") + "/" + path.lstrip("/"))
+
+    def heading(self, name: str):
+        return self.page.get_by_role("heading", name=name, exact=True)

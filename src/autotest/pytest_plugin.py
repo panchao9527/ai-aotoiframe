@@ -6,6 +6,7 @@ fixture 的 yield 前负责准备，yield 后负责清理；测试失败也会�
 
 import base64
 import hashlib
+import inspect
 import json
 import logging
 import re
@@ -21,7 +22,7 @@ from playwright.sync_api import expect
 
 from autotest.api.auth import load_profile, role_client
 from autotest.api.client import ApiClient
-from autotest.config import Settings, load_settings
+from autotest.config import Settings, load_settings, load_web_storage_state
 from autotest.data import DataFactory
 from autotest.demo import DemoServer
 from autotest.evidence import BrowserEvidence
@@ -152,6 +153,20 @@ def pytest_runtest_setup(item):
             allure.dynamic.parameter(name, clean, mode=allure.parameter_mode.MASKED)
 
 
+@pytest.hookimpl(trylast=True, specname="pytest_runtest_setup")
+def pytest_validate_web_configuration(item):
+    """跳过条件处理后校验 Web；允许项目自己的 base_url fixture 提供地址。"""
+    # pytest-base-url 的 autouse fixture 也请求 base_url，不能仅看 fixturenames。
+    callspec = getattr(item, "callspec", None)
+    explicit_base_url = (
+        isinstance(item, pytest.Function)
+        and "base_url" in inspect.signature(item.function).parameters
+        and (callspec is None or "base_url" not in callspec.params)
+    )
+    if item.get_closest_marker("web") or explicit_base_url:
+        _require_web_settings(item.config.stash[SETTINGS_KEY], item.funcargs.get("base_url"))
+
+
 @pytest.hookimpl(optionalhook=True)
 def pytest_html_report_title(report):
     report.title = "自动化测试报告 · API / Web / App"
@@ -191,14 +206,25 @@ def api_base_url(settings, request):
 
 @pytest.fixture(scope="session")
 def base_url(settings, request):
-    """覆盖 pytest-base-url 的 fixture；也可直接传给 page.goto。"""
+    """兼容插件的 autouse 校验；API/App 运行时不要求配置 Web 地址。"""
+    if settings.env != "demo" and not settings.web_base_url:
+        return None
     return _base_url(settings, request, "web_base_url")
+
+
+def _require_web_settings(settings, resolved_base_url=None):
+    if settings.env != "demo" and not settings.web_base_url and not resolved_base_url:
+        raise pytest.UsageError("请在 .env 设置 WEB_BASE_URL 或在环境 YAML 填写 web_base_url")
 
 
 @pytest.fixture
 def api_client(settings, api_base_url):
     with ApiClient(
-        api_base_url, token=settings.api_token, timeout=settings.timeout_seconds
+        api_base_url,
+        token=settings.api_token,
+        timeout=settings.timeout_seconds,
+        ca_bundle=settings.api_ca_bundle,
+        trust_env=settings.api_trust_env,
     ) as client:
         yield client
 
@@ -231,6 +257,8 @@ def role_clients(settings, request):
                     request.getfixturevalue("api_base_url"),
                     role=name,
                     timeout=settings.timeout_seconds,
+                    ca_bundle=settings.api_ca_bundle,
+                    trust_env=settings.api_trust_env,
                 )
                 clients[name] = stack.enter_context(client)
             return clients[name]
@@ -275,7 +303,13 @@ def data_factory(request, role_clients):
 
 @pytest.fixture(scope="session")
 def browser_context_args(browser_context_args, settings):
-    return {**browser_context_args, "locale": "zh-CN", "timezone_id": "Asia/Shanghai"}
+    _require_web_settings(settings, browser_context_args.get("base_url"))
+    args = {**browser_context_args, "locale": "zh-CN", "timezone_id": "Asia/Shanghai"}
+    if settings.web_storage_state:
+        load_web_storage_state(settings.web_storage_state)
+        # 给 Playwright 传文件路径，避免包含凭据的整个字典出现在 fixture 错误参数中。
+        args["storage_state"] = settings.web_storage_state
+    return args
 
 
 @pytest.fixture

@@ -1,0 +1,11 @@
+"""公司项目默认使用 company_test；CLI --env 优先于 .env 和默认值。"""
+
+import os
+from pathlib import Path
+
+from dotenv import load_dotenv
+
+load_dotenv(Path(__file__).parent / ".env", override=False)
+os.environ.setdefault("TEST_ENV", "company_test")
+
+pytest_plugins = ["autotest.pytest_plugin", "autotest.mobile.plugin"]

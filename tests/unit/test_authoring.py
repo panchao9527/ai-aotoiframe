@@ -29,6 +29,11 @@ def author_project(tmp_path, monkeypatch):
         )
     for name in ("pyproject.toml", "conftest.py"):
         shutil.copy2(ROOT / name, tmp_path / name)
+    # 公司导出项目没有演示业务 fixture，单测自行建立最小测试材料。
+    fixture = tmp_path / "tests/api/conftest.py"
+    if not fixture.exists():
+        fixture.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(ROOT / "examples/authoring/api_fixtures.py", fixture)
     monkeypatch.chdir(tmp_path)
     for key in ("API_BASE_URL", "WEB_BASE_URL", "API_TOKEN", "API_AUTH_FILE", "PYTEST_ADDOPTS"):
         monkeypatch.delenv(key, raising=False)
@@ -366,6 +371,13 @@ def test_partial_runtime_skip_does_not_validate_whole_draft(author_project):
 
 
 def test_all_skipped_business_returns_nonzero_even_with_passing_unit(author_project):
+    skipped = author_project / "tests/web/test_gate_skipped.py"
+    skipped.parent.mkdir(parents=True, exist_ok=True)
+    skipped.write_text(
+        'import pytest\n@pytest.mark.skip(reason="no target")\ndef test_unavailable():\n    pass\n',
+        encoding="utf-8",
+    )
+    (author_project / "configs/environments/test.yaml").write_text("{}\n", encoding="utf-8")
     child_temp = author_project / "child-temp"
     child_temp.mkdir()
     environment = {
@@ -379,7 +391,7 @@ def test_all_skipped_business_returns_nonzero_even_with_passing_unit(author_proj
         sys.executable,
         "-m",
         "pytest",
-        "tests/web",
+        "tests/web/test_gate_skipped.py",
         "tests/unit/test_cli.py",
         "--env",
         "test",

@@ -53,20 +53,33 @@ class ExecutionTracker:
                 "executed": counts["passed"] + counts["failed"],
             }
         expected = self.config.getoption("business_kind")
-        kinds = ("api", "web", "app") if expected == "all" else (expected,)
-        missing = self.config.getoption("require_business") and not any(
-            groups[k]["executed"] for k in kinds
-        )
-        if missing and not self.config.option.collectonly and exitstatus == 0:
+        # all 至少执行 API 和 Web；显式启用设备后 App 也必须真实执行。
+        # 各端分别检查，避免一端通过掩盖另一端全部跳过。
+        kinds = [expected]
+        if expected == "all":
+            kinds = ["api", "web"]
+            if self.config.getoption("run_app", default=False):
+                kinds.append("app")
+        missing = [kind for kind in kinds if not groups[kind]["executed"]]
+        if (
+            self.config.getoption("require_business")
+            and missing
+            and not self.config.option.collectonly
+            and exitstatus == 0
+        ):
             session.exitstatus = pytest.ExitCode.TESTS_FAILED
             reporter = self.config.pluginmanager.getplugin("terminalreporter")
             if reporter:
                 reporter.write_sep(
-                    "!", f"目标业务套件 {expected} 没有实际执行；全部跳过不算通过", red=True
+                    "!",
+                    f"目标业务套件 {', '.join(missing)} 没有实际执行；全部跳过不算通过",
+                    red=True,
                 )
         payload = {
             "groups": groups,
             "required_kind": expected,
+            "required_kinds": kinds,
+            "missing_kinds": missing,
             "collection_only": bool(self.config.option.collectonly),
             "exit_code": int(session.exitstatus),
         }

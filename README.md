@@ -63,6 +63,23 @@ uv run python -m autotest run --suite all
 
 ## 常用命令
 
+### 带到新公司：生成独立项目
+
+```text
+uv run --frozen qa project init --name company-qa --output ../company-qa
+cd ../company-qa
+uv sync --frozen
+```
+
+按生成项目的 README 填写环境、角色鉴权、业务冒烟参数和设备配置。
+生成项目包含独立源码与锁文件、API/Web/App 分层样板、框架单测和公司 CI 模板，
+默认使用 `company_test`，输出目录必须是仓库外的新目录。
+随后按端执行离线预检，例如 `uv run --frozen qa project check --env company_test --suite web`。
+详见 [新公司接入](docs/06-new-project.md)。
+
+API 支持 `API_CA_BUNDLE` 追加内部 CA、`API_TRUST_ENV=true` 显式启用环境代理；
+Web 支持 `WEB_STORAGE_STATE` 读取受控登录态文件。真实业务地址、断言和定位仍需按公司资料填写。
+
 ```powershell
 # 查看环境诊断与帮助。
 uv run python -m autotest doctor
@@ -116,6 +133,7 @@ uv run python -m autotest demo --port 8765
 13. [业务接入、数据与依据](docs/13-business-foundation.md)：本轮 P0 能力、可运行样板与使用限制。
 14. [ARTEMIS Android AI 探索](docs/14-artemis-integration.md)：独立部署、设备探索、MCP 与 Appium 回归边界。
 15. [统一运行日志与排查](docs/15-unified-logging.md)：事件字段、业务步骤、查询、脱敏和并行日志。
+16. [新公司三端接入验证](docs/16-company-ready-validation.md)：初始化、三端预检、企业配置与本轮验证范围。
 
 ## 维护约定
 
@@ -125,6 +143,7 @@ uv run python -m autotest demo --port 8765
 - `.env`、真实账号、令牌不提交到 Git；示例 YAML 只放普通配置。
 - AI 的结果先作为草稿审查；定位器变化与真实产品缺陷需要区分，修改后重新运行验证。
 - `run --suite api/web/app/all` 默认要求目标业务实际执行；全跳过返回非零。
+  `all` 要求 API/Web 分别执行，带 `--run-app` 后也要求 App 执行；两种手机平台分别验收。
   初始化时可显式传 `--allow-empty`，不把框架单测当成公司业务验收。
 - 使用 `uv lock` 更新锁文件，审查依赖变更后再提交；CI 使用 `uv sync --frozen` 复现它。
 
