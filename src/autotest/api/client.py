@@ -6,6 +6,7 @@ from urllib.parse import urlsplit
 
 import httpx
 
+from autotest.config import build_api_ssl_context
 from autotest.evidence import safe_url
 from autotest.run_logging import emit_event
 
@@ -23,6 +24,8 @@ class ApiClient:
         *,
         token: str | None = None,
         timeout: float = 20,
+        ca_bundle: str = "",
+        trust_env: bool = False,
         transport: httpx.BaseTransport | None = None,
     ) -> None:
         headers = {"Authorization": f"Bearer {token}"} if token else {}
@@ -33,7 +36,8 @@ class ApiClient:
             timeout=timeout,
             follow_redirects=False,
             transport=transport,
-            trust_env=False,
+            verify=build_api_ssl_context(ca_bundle),
+            trust_env=trust_env,
         )
 
     def request(self, method: str, path: str, **kwargs) -> httpx.Response:

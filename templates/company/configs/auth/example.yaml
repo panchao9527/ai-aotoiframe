@@ -1,0 +1,19 @@
+# 复制后通过环境 YAML 的 api_auth_file 选择；只写环境变量名，不能填写凭据值。
+default_role: operator
+roles:
+  operator:
+    mode: login
+    login_path: /api/login
+    credentials_env:
+      username: TEST_OPERATOR_USERNAME
+      password: TEST_OPERATOR_PASSWORD
+    token_field: token  # 嵌套字段示例：data.accessToken
+    expected_status: 200
+    # 若系统使用业务码，请按真实契约配置，例如 success_fields: {code: 0}
+    headers_env:
+      X-Tenant-Id: TEST_TENANT_ID
+  reader:
+    mode: bearer
+    token_env: TEST_READER_TOKEN
+  anonymous:
+    mode: none

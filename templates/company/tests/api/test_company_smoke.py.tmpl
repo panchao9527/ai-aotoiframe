@@ -1,0 +1,19 @@
+"""替换 smoke.yaml 后验证第一个公司只读接口。"""
+
+import pytest
+
+from autotest.api.company_service import CompanyService
+
+pytestmark = [pytest.mark.api, pytest.mark.smoke]
+
+
+def test_company_read_api(smoke_config, role_clients, log_step):
+    with log_step("验证公司只读接口"):
+        response = CompanyService(role_clients()).read(smoke_config["path"])
+        assert response.status_code == smoke_config["expected_status"]
+        value = response.json()
+        for key in smoke_config["expected_field"].split("."):
+            assert isinstance(value, dict) and key in value, "响应缺少契约约定的字段"
+            value = value[key]
+        expected = smoke_config["expected_value"]
+        assert type(value) is type(expected) and value == expected, "业务字段不符合预期"

@@ -1,0 +1,9 @@
+# 必须替换地址，也可由 .env / CI 同名大写环境变量覆盖。
+api_base_url: https://api.example.invalid
+web_base_url: https://web.example.invalid
+api_auth_file: configs/auth/company.yaml
+timeout_seconds: 20
+web_timeout_ms: 10000
+appium_server_url: http://127.0.0.1:4723
+app_platform: android
+app_caps_file: configs/devices/android.yaml

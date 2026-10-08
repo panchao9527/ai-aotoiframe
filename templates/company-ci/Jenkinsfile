@@ -1,0 +1,89 @@
+// 公司项目示例：复制到项目根 Jenkinsfile；保留 templates/company-ci/run_company_ci.py。
+// Linux/macOS 节点预装 Python 3.11、uv；Web 节点预装浏览器系统库。
+// App 节点预装 SDK、Appium/对应驱动并启动服务；iOS 节点必须是 macOS。
+pipeline {
+    agent {
+        label "${params.SUITE == 'app' ? (params.APP_PLATFORM == 'ios' ? params.IOS_AGENT_LABEL : params.ANDROID_AGENT_LABEL) : params.LINUX_AGENT_LABEL}"
+    }
+    parameters {
+        string(name: 'TEST_ENV', defaultValue: 'company_test', description: 'configs/environments 中的公司环境名，禁止 demo')
+        choice(name: 'SUITE', choices: ['api', 'web', 'app'], description: '本次实际执行的业务端')
+        choice(name: 'APP_PLATFORM', choices: ['android', 'ios'], description: 'App 平台')
+        string(name: 'LINUX_AGENT_LABEL', defaultValue: 'qa-linux', description: '可访问公司环境的 Linux 节点')
+        string(name: 'ANDROID_AGENT_LABEL', defaultValue: 'qa-android-device', description: '绑定 Android 测试设备的节点')
+        string(name: 'IOS_AGENT_LABEL', defaultValue: 'qa-ios-device && macos', description: '绑定 iOS 测试设备的 macOS 节点')
+        string(name: 'ENV_CREDENTIALS_ID', defaultValue: 'company-test-env', description: 'Secret file 凭据 ID：dotenv 格式；无秘密时可清空')
+        string(name: 'DEVICE_RESOURCE', defaultValue: 'qa-primary-device', description: '共享此物理设备的所有 job 必须使用同一锁名称')
+    }
+    options {
+        timestamps()
+        timeout(time: 60, unit: 'MINUTES')
+        disableConcurrentBuilds()
+        skipDefaultCheckout(true)
+        buildDiscarder(logRotator(numToKeepStr: '20', artifactNumToKeepStr: '10'))
+    }
+    environment {
+        UV_PYTHON = '3.11'
+        PYTHONUTF8 = '1'
+    }
+    stages {
+        stage('Checkout') {
+            steps {
+                // 只清理此 job 的 workspace，避免旧报告或旧 .env 参与本次执行。
+                deleteDir()
+                checkout scm
+            }
+        }
+        stage('Install') {
+            steps {
+                sh 'uv sync --frozen'
+                script {
+                    if (params.SUITE == 'web') {
+                        sh 'uv run --frozen python -m playwright install chromium'
+                    }
+                }
+            }
+        }
+        stage('Preflight and test') {
+            steps {
+                script {
+                    def executeTests = {
+                        // 参数由环境变量传入 shell，禁止 Groovy 插值账号或密码。
+                        sh '''#!/usr/bin/env bash
+set -euo pipefail
+uv run --frozen python templates/company-ci/run_company_ci.py \
+  --env "$TEST_ENV" --suite "$SUITE" --app-platform "$APP_PLATFORM"
+'''
+                    }
+                    def withTestEnvironment = {
+                        if (params.ENV_CREDENTIALS_ID?.trim()) {
+                            withCredentials([file(credentialsId: params.ENV_CREDENTIALS_ID, variable: 'CI_ENV_FILE')]) {
+                                executeTests()
+                            }
+                        } else {
+                            executeTests()
+                        }
+                    }
+                    if (params.SUITE == 'app') {
+                        // 需安装 Lockable Resources 插件；跨 job 也不能抢同一设备。
+                        if (!params.DEVICE_RESOURCE?.trim()) {
+                            error('App 必须指定 DEVICE_RESOURCE 设备锁')
+                        }
+                        lock(resource: params.DEVICE_RESOURCE) {
+                            withTestEnvironment()
+                        }
+                    } else {
+                        withTestEnvironment()
+                    }
+                }
+            }
+        }
+    }
+    post {
+        always {
+            // 安装/预检失败可能没有 JUnit；原命令的非零退出码仍使构建失败。
+            junit testResults: 'artifacts/**/junit.xml', allowEmptyResults: true
+            archiveArtifacts artifacts: 'artifacts/**/*', allowEmptyArchive: true
+        }
+    }
+}

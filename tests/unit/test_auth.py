@@ -159,7 +159,7 @@ def test_project_check_reports_missing_variables_without_logging_values(
         "autotest.project.load_settings",
         lambda *args: Settings(
             env="test",
-            api_base_url="https://test.invalid",
+            api_base_url="https://api.internal",
             api_auth_file=str(path),
         ),
     )
@@ -169,3 +169,25 @@ def test_project_check_reports_missing_variables_without_logging_values(
     assert main(["check", "--env", "test"]) == 0
     output = capsys.readouterr().out
     assert "未验证网络" in output and "unlabelled-private-value" not in output
+
+
+def test_role_login_uses_company_ca_before_sending_credentials(profile, tmp_path):
+    def handle(request):
+        pytest.fail("角色登录之前必须先校验配置的公司 CA")
+
+    with pytest.raises(ValueError, match="API_CA_BUNDLE"):
+        role_client(
+            profile,
+            "https://api.internal",
+            ca_bundle=str(tmp_path / "missing.pem"),
+            transport=httpx.MockTransport(handle),
+        )
+
+
+def test_role_login_only_trusts_machine_environment_when_enabled(profile, tmp_path, monkeypatch):
+    for key in ("HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY", "NO_PROXY"):
+        monkeypatch.delenv(key, raising=False)
+        monkeypatch.delenv(key.lower(), raising=False)
+    monkeypatch.setenv("SSL_CERT_FILE", str(tmp_path / "missing.pem"))
+    with pytest.raises(OSError):
+        role_client(profile, "https://api.internal", trust_env=True)

@@ -128,12 +128,21 @@ def role_client(
     *,
     role: str | None = None,
     timeout: float = 20,
+    ca_bundle: str = "",
+    trust_env: bool = False,
     transport: httpx.BaseTransport | None = None,
 ) -> ApiClient:
     """返回已鉴权的独立客户端；调用者负责关闭，fixture 会自动管理生命周期。"""
     config, credentials, headers = resolve_role(profile, role)
     token = os.environ[config.token_env] if config.token_env else None
-    client = ApiClient(base_url, token=token, timeout=timeout, transport=transport)
+    client = ApiClient(
+        base_url,
+        token=token,
+        timeout=timeout,
+        ca_bundle=ca_bundle,
+        trust_env=trust_env,
+        transport=transport,
+    )
     try:
         client.raw_client.headers.update(headers)
         if config.mode == "login":

@@ -1,0 +1,15 @@
+"""验证公司页面的业务标志；用可观察的预期代替“页面打开就通过”。"""
+
+import pytest
+from playwright.sync_api import expect
+
+from autotest.web.company_page import CompanyPage
+
+pytestmark = [pytest.mark.web, pytest.mark.smoke]
+
+
+def test_company_page(smoke_config, page, base_url, log_step):
+    with log_step("验证公司页面"):
+        screen = CompanyPage(page)
+        screen.open(base_url, smoke_config["path"])
+        expect(screen.heading(smoke_config["expected_heading"])).to_be_visible()

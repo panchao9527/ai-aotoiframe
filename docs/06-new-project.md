@@ -2,6 +2,44 @@
 
 目标是复用工程结构，再补上公司业务。地址、账号和定位器会改变；测试的组织方式、报告入口和分层原则可以继续使用。
 
+## 推荐入口：一条命令生成公司项目
+
+```text
+uv run --frozen qa project init --name company-qa --output ../company-qa
+cd ../company-qa
+uv sync --frozen
+```
+
+在生成项目中按 README 配置 `company_test.yaml`、`.env`、`configs/business/smoke.yaml`，
+然后分别运行 `qa project check --env company_test --suite api`、`--suite web`、`--suite app`。
+`--suite all` 会汇总三端配置问题；App 的 `--app-platform`、`--app-caps` 可覆盖 YAML。
+占位域名、缺少账号变量、无效 CA/登录态、未明确设备选择会在离线预检中失败。
+预检不会登录、操作页面或连接手机，不能替代真实测试。
+
+生成目录自带源码、锁文件、框架单测、业务 Service/Page/Screen 和 GitHub/Jenkins 模板。
+公司业务没有 demo 标记；默认环境为 `company_test`。未填业务冒烟预期时明确失败，
+App 未启用时跳过。`run --suite all` 要求 API/Web 分别实际执行，显式启用 App 后也检查 App。
+Android/iOS 分别执行验收。`.env`、报告、Git 历史、原环境文件不随初始化复制。
+初始化只能用于完整源码仓库，拒绝覆盖现有目录。公司 CI 指南在生成项目的
+`templates/company-ci/README.md`。
+
+企业网络与 Web 登录态配置：
+
+| 变量 | 行为 |
+| --- | --- |
+| `API_CA_BUNDLE` | 本地 PEM CA 文件，追加到默认可信根；始终验证 TLS |
+| `API_TRUST_ENV` | 默认 false；true 时读取 HTTPX 代理和环境证书设置 |
+| `HTTPS_PROXY` / `NO_PROXY` | 仅 API_TRUST_ENV=true 时作用于 API 客户端 |
+| `WEB_STORAGE_STATE` | Playwright 导出的 JSON 登录态，每个 context 独立使用；不保证会话未过期 |
+
+显式 API_CA_BUNDLE 优先于 SSL_CERT_FILE/DIR；Web 证书由系统/浏览器配置。
+将登录态放 `.auth/`、证书放 `.secrets/`，这些目录已加入 Git 忽略。
+登录态可由自己的登录 fixture 用 `context.storage_state(path=...)` 导出。
+初始公司 API 角色为 `none`；受保护接口需把 `configs/auth/company.yaml` 的角色改为
+`bearer`（引用 API_TOKEN）或 `login`。不猜 Cookie/SSO/OAuth 等公司的真实协议。
+
+以下手工接入步骤仍适用于已有的业务项目。
+
 ## 1. 第一周先完成一条稳定链路
 
 先挑一个明确且可重复的业务，例如“测试用户登录 → 创建订单 → 查询订单 → 取消订单”。先跑接口，再为关键用户流程加 Web / App。以下清单可复制到公司的接入任务中：

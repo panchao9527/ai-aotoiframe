@@ -3,12 +3,16 @@
 配置只是数据，不包含启动浏览器等副作用。单测可独立验证配置错误。
 """
 
+import json
+import math
 import os
 import re
+import ssl
 from pathlib import Path
 from typing import Literal
 from urllib.parse import urlsplit
 
+import certifi
 import yaml
 from dotenv import load_dotenv
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -24,8 +28,11 @@ class Settings(BaseModel):
     web_base_url: str | None = None
     api_token: str | None = Field(default=None, repr=False)
     api_auth_file: str = ""  # 可选角色配置；未配置时保留原有 api_client / API_TOKEN 用法。
+    api_ca_bundle: str = ""  # 默认可信根之外，公司 CA 的 PEM 文件；不关闭 TLS 校验。
+    api_trust_env: bool = False  # 显式允许 HTTPX 使用环境代理和 SSL_CERT_FILE / SSL_CERT_DIR。
     timeout_seconds: float = Field(default=20, gt=0, le=300)
     web_timeout_ms: int = Field(default=10000, gt=0, le=300000)
+    web_storage_state: str = ""  # 本地 Playwright 登录态，包含凭据，不能提交。
     appium_server_url: str = "http://127.0.0.1:4723"
     app_platform: str = "android"
     app_caps_file: str = ""
@@ -71,6 +78,78 @@ class Settings(BaseModel):
         if parsed.scheme == "http" and not loopback:
             raise ValueError("远程 ARTEMIS 必须使用 HTTPS；无认证服务请通过 SSH 隧道连接 localhost")
         return value.rstrip("/")
+
+
+def build_api_ssl_context(ca_bundle: str) -> ssl.SSLContext | bool:
+    """保留 HTTPX 默认可信根，追加公司 CA；无配置时保留 HTTPX 原生验证行为。
+
+    此配置只影响 API，浏览器 HTTPS 仍使用浏览器/系统的信任库。
+    显式 CA 配置优先于 API_TRUST_ENV 开启后的 SSL_CERT_FILE / SSL_CERT_DIR。
+    """
+    if not ca_bundle:
+        return True
+    try:
+        context = ssl.create_default_context(cafile=certifi.where())
+        context.load_verify_locations(cafile=ca_bundle)
+    except (OSError, ValueError):
+        raise ValueError("API_CA_BUNDLE 必须指向存在、可读取的 PEM CA 证书文件") from None
+    return context
+
+
+def load_web_storage_state(path: str) -> dict:
+    """在创建浏览器上下文前校验登录态文件，错误不带出 Cookie/Token 内容。
+
+    只检查 Playwright 状态的必要结构，保留 IndexedDB 等可选扩展字段。
+    登录态有效期和实际权限仍需业务用例验证。
+    """
+    try:
+        state = json.loads(Path(path).read_text(encoding="utf-8-sig"))
+    except (OSError, ValueError):
+        raise ValueError(
+            "WEB_STORAGE_STATE 必须指向存在、可读取的 Playwright JSON 登录态文件"
+        ) from None
+    if not _valid_storage_state(state):
+        raise ValueError(
+            "WEB_STORAGE_STATE 格式无效，需要 Playwright storage_state 的 cookies/origins"
+        )
+    return state
+
+
+def _valid_storage_state(state: object) -> bool:
+    if not isinstance(state, dict):
+        return False
+    cookies, origins = state.get("cookies"), state.get("origins")
+    if not isinstance(cookies, list) or not isinstance(origins, list):
+        return False
+    for cookie in cookies:
+        if not isinstance(cookie, dict):
+            return False
+        if any(not isinstance(cookie.get(key), str) for key in ("name", "value", "domain", "path")):
+            return False
+        expires = cookie.get("expires")
+        if type(expires) not in {int, float} or (
+            isinstance(expires, float) and not math.isfinite(expires)
+        ):
+            return False
+        if any(not isinstance(cookie.get(key), bool) for key in ("httpOnly", "secure")):
+            return False
+        if cookie.get("sameSite") not in ("Strict", "Lax", "None"):
+            return False
+    for origin in origins:
+        if not isinstance(origin, dict) or not isinstance(origin.get("origin"), str):
+            return False
+        storage = origin.get("localStorage")
+        if not isinstance(storage, list):
+            return False
+        if any(
+            not isinstance(item, dict)
+            or any(not isinstance(item.get(key), str) for key in ("name", "value"))
+            for item in storage
+        ):
+            return False
+        if "indexedDB" in origin and not isinstance(origin["indexedDB"], list):
+            return False
+    return True
 
 
 def load_settings(

@@ -1,0 +1,11 @@
+"""公司业务 Service：只封装调用；预期结果由测试断言。"""
+
+from autotest.api.client import ApiClient
+
+
+class CompanyService:
+    def __init__(self, client: ApiClient):
+        self.client = client
+
+    def read(self, path: str):
+        return self.client.get(path)

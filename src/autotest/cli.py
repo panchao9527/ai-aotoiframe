@@ -67,8 +67,9 @@ def run_tests(suite: str, extra: list[str]) -> int:
         )
         assert process.stdout is not None
         for line in process.stdout:
-            print(line, end="", flush=True)
-            console.write(redact_text(line))
+            clean = redact_text(line)
+            print(clean, end="", flush=True)
+            console.write(clean)
         exit_code = process.wait()
     (destination / "run.json").write_text(
         json.dumps(
@@ -194,7 +195,7 @@ def main(argv: list[str] | None = None) -> int:
     run = sub.add_parser("run", help="运行测试并生成报告，-- 后可接 pytest 参数")
     run.add_argument("--suite", choices=["all", "unit", "api", "web", "app"], default="all")
     sub.add_parser("doctor", help="只读检查 Python 依赖和可选工具")
-    sub.add_parser("project", help="项目 API 地址和角色鉴权配置预检")
+    sub.add_parser("project", help="初始化公司项目和 API/Web/App 离线预检")
     sub.add_parser("browser", help="固定版本 Playwright CLI 页面探索入口")
     sub.add_parser("artemis", help="可选 ARTEMIS Android AI 探索入口")
     demo = sub.add_parser("demo", help="手动启动本地练习系统，Ctrl+C 关闭")

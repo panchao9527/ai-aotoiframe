@@ -1,0 +1,10 @@
+"""平台差异放在 Screen 中，测试保留业务断言。"""
+
+from appium.webdriver.common.appiumby import AppiumBy
+
+from autotest.mobile.screens import BaseScreen
+
+
+class CompanyScreen(BaseScreen):
+    def landmark(self, accessibility_id: str):
+        return self.visible((AppiumBy.ACCESSIBILITY_ID, accessibility_id))

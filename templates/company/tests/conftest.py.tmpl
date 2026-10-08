@@ -1,0 +1,33 @@
+"""冒烟样板参数集中配置；不连接公司环境直到参数填写完整。"""
+
+from pathlib import Path
+
+import pytest
+import yaml
+
+
+@pytest.fixture
+def smoke_config(settings, request):
+    if settings.env == "demo":
+        pytest.fail("公司业务用例不能在 demo 环境运行，请指定 --env company_test", pytrace=False)
+    path = Path("configs/business/smoke.yaml")
+    try:
+        data = yaml.safe_load(path.read_text(encoding="utf-8"))
+    except (OSError, yaml.YAMLError):
+        pytest.fail("请检查 configs/business/smoke.yaml", pytrace=False)
+    kind = next(key for key in ("api", "web", "app") if request.node.get_closest_marker(key))
+    values = data.get(kind) if isinstance(data, dict) else None
+    required = {
+        "api": ("path", "expected_field"),
+        "web": ("path", "expected_heading"),
+        "app": ("expected_accessibility_id", "expected_text"),
+    }[kind]
+    if not isinstance(values, dict) or any(
+        not isinstance(values.get(key), str) or not values[key].strip() for key in required
+    ):
+        pytest.fail(f"请补全 smoke.yaml 的 {kind} 字段：{', '.join(required)}", pytrace=False)
+    if kind == "api":
+        status = values.get("expected_status")
+        if type(status) is not int or not 100 <= status <= 599 or "expected_value" not in values:
+            pytest.fail("API 需要 expected_status 和 expected_value", pytrace=False)
+    return values

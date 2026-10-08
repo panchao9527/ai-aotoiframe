@@ -1,0 +1,16 @@
+# 初始为公开只读接口。受保护接口必须改成 bearer 或 login。
+default_role: operator
+roles:
+  operator:
+    mode: none
+    # Bearer 示例：mode: bearer，然后取消下一行注释。
+    # token_env: API_TOKEN
+    # JSON 登录示例：mode: login，填写以下字段，并保持 token_env 注释。
+    # login_path: /replace-with-real-login-path
+    # credentials_env:
+    #   username: TEST_OPERATOR_USERNAME
+    #   password: TEST_OPERATOR_PASSWORD
+    # token_field: data.accessToken
+    # success_fields: {code: 0}
+  anonymous:
+    mode: none
