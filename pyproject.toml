@@ -4,17 +4,14 @@ build-backend = "hatchling.build"
 
 [project]
 name = "qa-automation-starter"
-version = "0.1.0"
+version = "0.2.0"
 description = "面向新手、可迁移的接口 / Web / Android / iOS 自动化测试框架"
 readme = "README.md"
 requires-python = ">=3.11,<3.14"
 dependencies = [
   "pytest>=8.3,<10",
-  "pytest-playwright>=0.7,<1",
-  "playwright>=1.51,<2",
   "httpx>=0.28,<1",
   "certifi>=2024.8.30",
-  "Appium-Python-Client>=5.1,<7",
   "pydantic>=2.10,<3",
   "PyYAML>=6.0.2,<7",
   "python-dotenv>=1.0,<2",
@@ -25,19 +22,23 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+web = ["pytest-playwright>=0.7,<1", "playwright>=1.51,<2"]
+app = ["Appium-Python-Client>=5.1,<7"]
+all = ["pytest-playwright>=0.7,<1", "playwright>=1.51,<2", "Appium-Python-Client>=5.1,<7"]
 # 仅安装零运行依赖的远程客户端。完整 ARTEMIS 服务在独立 Python 3.12+ 设备主机运行。
 artemis = [
   "artemis-client @ git+https://github.com/google/artemis.git@371aa6df56880643da57b30da936e9812fb0ec66#subdirectory=packages/artemis-client",
 ]
 
 [dependency-groups]
-dev = ["ruff>=0.11,<1"]
+# 默认源码开发体验保持三端齐全；--no-dev 让公司节点可以只安装所需端。
+dev = ["ruff>=0.11,<1", "pytest-playwright>=0.7,<1", "playwright>=1.51,<2", "Appium-Python-Client>=5.1,<7"]
 
 [project.scripts]
 qa = "autotest.cli:main"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/autotest"]
+packages = ["src/autotest", "src/project_business"]
 
 [tool.hatch.metadata]
 # ARTEMIS 轻量客户端尚以仓库子目录发布；固定提交保证可重复安装。

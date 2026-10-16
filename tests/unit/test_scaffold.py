@@ -7,12 +7,14 @@ import shutil
 import subprocess
 import sys
 from pathlib import Path
+from uuid import uuid4
 
 import pytest
 import yaml
 
 from autotest.config import Settings
 from autotest.demo import DemoServer
+from autotest.lifecycle import CATALOG, STATE, read_catalog
 from autotest.scaffold import init_project
 
 pytestmark = pytest.mark.unit
@@ -46,6 +48,8 @@ def test_export_has_independent_assets_and_no_demo_business(tmp_path):
     assert not (project / "artifacts").exists()
     assert not (project / "tests/api/test_items.py").exists()
     assert not (project / "tests/web/test_login.py").exists()
+    assert (project / "src/project_business/api/company_service.py").is_file()
+    assert (project / STATE).is_file()
     assert "company-qa" in (project / "README.md").read_text(encoding="utf-8")
     for platform in ("android", "ios"):
         assert (project / f"configs/devices/{platform}.yaml").is_file()
@@ -80,25 +84,21 @@ def test_destination_cannot_be_inside_framework():
 
 
 def test_template_private_files_are_not_exported(tmp_path, monkeypatch):
+    canary = uuid4().hex.encode()
     source = tmp_path / "source"
-    for folder in ("templates", "src/autotest"):
-        shutil.copytree(
-            ROOT / folder, source / folder, ignore=shutil.ignore_patterns("__pycache__")
-        )
-    for name in (
-        "pyproject.toml",
-        "uv.lock",
-        ".python-version",
-        ".gitignore",
-        ".gitattributes",
-        "AGENTS.md",
-        ".playwright/cli.config.json",
-        "configs/environments/demo.yaml",
-        "configs/auth/demo.yaml",
-    ):
+    catalog = read_catalog(ROOT)
+    for name in [CATALOG, *catalog["managed"], *catalog["bootstrap"]]:
         destination = source / name
         destination.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(ROOT / name, destination)
+    for name in (
+        "src/autotest/api/private_company.py",
+        "docs/private-company.md",
+        "templates/company/private.py",
+    ):
+        private = source / name
+        private.parent.mkdir(parents=True, exist_ok=True)
+        private.write_bytes(canary)
     for name in (
         ".env",
         ".env.production",
@@ -108,12 +108,12 @@ def test_template_private_files_are_not_exported(tmp_path, monkeypatch):
     ):
         secret = source / "templates/company" / name
         secret.parent.mkdir(parents=True, exist_ok=True)
-        secret.write_text("private-canary", encoding="utf-8")
+        secret.write_bytes(canary)
     monkeypatch.setattr("autotest.scaffold._source_root", lambda: source)
     project = init_project("company", tmp_path / "export")
     for path in project.rglob("*"):
         if path.is_file():
-            assert b"private-canary" not in path.read_bytes(), path
+            assert canary not in path.read_bytes(), path
 
 
 def test_generated_api_runs_actual_contract_and_fails_when_expectation_changes(tmp_path):

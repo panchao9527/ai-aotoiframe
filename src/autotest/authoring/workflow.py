@@ -34,7 +34,8 @@ App: 使用 app_driver 与 BaseScreen，原生控件通过 Appium 定位；明�
 复杂场景可注入 log_step fixture，用 with log_step("业务阶段", 非敏感字段=值) 记录关键阶段；
 不要逐行包装，不传密码、Token、完整请求/响应正文或个人隐私。
 不要硬编码账号、环境 URL、动态 ID；不保留录制的密码。不要创建第二套 YAML 执行语言。
-新增 fixture 放 tests/<kind>/<任务名>/conftest.py，测试放同目录；公共对象使用新的模块名，
+新增 fixture 放 tests/<kind>/<任务名>/conftest.py，测试放同目录；业务对象放
+src/project_business/api、web 或 mobile，使用新的模块名，公共底座 autotest 只通过 import 复用，
 不能覆盖现有文件。通过 import 复用现有对象。不要生成 .env、插件、依赖文件或系统命令。
 禁止固定 sleep、空测试、assert True、skip/xfail、吞异常，未知条件列 unresolved。
 demo 标记只用于自带练习系统，不能把公司用例标记 demo。代码加入必要中文注释。
@@ -71,7 +72,7 @@ def prepare(name: str, kind: str, mode: str, **inputs) -> Path:
     write_json(
         workspace / "manifest.json",
         {
-            "schema_version": 2,
+            "schema_version": 3,
             "name": name,
             "kind": kind,
             "mode": mode,
@@ -108,7 +109,9 @@ def generate(name: str, *, response: str | None = None, send: bool = False) -> P
         ) from exc
     seen = set()
     for item in parsed.files:
-        path = destination(item.path, manifest["kind"])
+        path = destination(
+            item.path, manifest["kind"], legacy=manifest.get("schema_version", 1) < 3
+        )
         if path.as_posix().lower() in seen:
             raise AIError(f"回复包含重复路径：{item.path}")
         seen.add(path.as_posix().lower())
@@ -118,7 +121,11 @@ def generate(name: str, *, response: str | None = None, send: bool = False) -> P
         # 校验整批后才写文件，错误回复不会留下半份草稿。
         ai.validate_python(item.content)
     for item in parsed.files:
-        target = workspace / "draft" / destination(item.path, manifest["kind"])
+        target = (
+            workspace
+            / "draft"
+            / destination(item.path, manifest["kind"], legacy=manifest.get("schema_version", 1) < 3)
+        )
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text(item.content.rstrip() + "\n", encoding="utf-8")
     manifest.update(

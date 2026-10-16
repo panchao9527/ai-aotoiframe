@@ -82,3 +82,28 @@ def test_run_command_tees_redacted_console_and_records_log_paths(tmp_path, monke
     assert metadata["logs"]["events"] == "events.jsonl"
     assert calls[0][1]["stderr"] is subprocess.STDOUT
     assert "shell" not in calls[0][1]
+
+
+def test_selected_path_does_not_append_entire_suite(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    target = tmp_path / "tests/api/test_one.py"
+    target.parent.mkdir(parents=True)
+    target.write_text("", encoding="utf-8")
+    calls = []
+
+    class Process:
+        stdout = iter([])
+
+        def wait(self):
+            return 0
+
+    monkeypatch.setattr(
+        "autotest.cli.subprocess.Popen", lambda command, **kw: calls.append(command) or Process()
+    )
+    assert run_tests("api", [], ["tests/api/test_one.py::test_one"]) == 0
+    assert "tests/api" not in calls[0]
+    assert "tests/api/test_one.py::test_one" in calls[0] and "--require-business" in calls[0]
+    with pytest.raises(ValueError):
+        run_tests("web", [], ["tests/api/test_one.py"])
+    with pytest.raises(ValueError):
+        run_tests("api", [], ["../secret.py"])

@@ -3,14 +3,15 @@
 from __future__ import annotations
 
 from collections.abc import Iterator
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import pytest
-from appium.webdriver.webdriver import WebDriver
 
 from autotest.evidence import safe_url
-from autotest.mobile.driver import MobileConfigurationError, driver_session, load_capabilities
 from autotest.run_logging import emit_event
+
+if TYPE_CHECKING:
+    from appium.webdriver.webdriver import WebDriver
 
 
 def pytest_addoption(parser: pytest.Parser) -> None:
@@ -56,6 +57,8 @@ def app_driver(request: pytest.FixtureRequest, settings: Any) -> Iterator[WebDri
     """
     if not request.config.getoption("run_app"):
         pytest.skip("使用 --run-app 并提供设备 capabilities 后运行真实 App 测试")
+    from autotest.mobile.driver import MobileConfigurationError, driver_session, load_capabilities
+
     platform = request.config.getoption("app_platform") or settings.app_platform
     caps_path = request.config.getoption("app_caps") or settings.app_caps_file
     server_url = request.config.getoption("appium_url") or settings.appium_server_url

@@ -149,7 +149,9 @@ uv run pytest tests/app -n 0 --run-app --app-platform ios --app-caps configs/dev
 | 登录按钮 | `login.submit` | `LoginScreen.SUBMIT` |
 | 登录成功后的首页根节点 | `home.screen` | `LoginScreen.HOME` |
 
-你需要修改 `src/autotest/mobile/screens.py` 的四个定位常量。若 Android/iOS 标识不同，新增 `AndroidLoginScreen` 和 `IOSLoginScreen` 子类，覆盖常量；保持 `login()` 等业务方法名一致，用 fixture 按平台选择类。不要在每条用例复制两套点击过程。
+公司工程在 `src/project_business/mobile/` 继承 `LoginScreen` 并覆盖四个定位常量。
+若 Android/iOS 标识不同，新增 `AndroidLoginScreen` 和 `IOSLoginScreen` 子类；
+保持 `login()` 等业务方法名一致，用 fixture 按平台选择类。不要在每条用例复制两套点击过程。
 
 ```python
 from appium.webdriver.common.appiumby import AppiumBy

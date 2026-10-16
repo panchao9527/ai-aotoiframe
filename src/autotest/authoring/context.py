@@ -175,7 +175,7 @@ def collect_sources(sources: list[str], match: str | None) -> list[dict]:
 def inventory(root: Path) -> list[dict]:
     """静态提取对象/fixture/用例签名；不 import 业务代码、不执行模块级逻辑。"""
     result = []
-    paths = sorted((root / "src/autotest").rglob("*.py")) + sorted((root / "tests").rglob("*.py"))
+    paths = sorted((root / "src").rglob("*.py")) + sorted((root / "tests").rglob("*.py"))
     for path in paths:
         if path.is_symlink() or any(p in EXCLUDED for p in path.relative_to(root).parts):
             continue

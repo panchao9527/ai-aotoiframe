@@ -18,7 +18,6 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
-from playwright.sync_api import expect
 
 from autotest.api.auth import load_profile, role_client
 from autotest.api.client import ApiClient
@@ -315,6 +314,8 @@ def browser_context_args(browser_context_args, settings):
 @pytest.fixture
 def page(page, settings, request):
     """沿用官方隔离 page fixture，仅统一动作/断言超时。"""
+    from playwright.sync_api import expect
+
     page.set_default_timeout(settings.web_timeout_ms)
     page.set_default_navigation_timeout(settings.web_timeout_ms)
     expect.set_options(timeout=settings.web_timeout_ms)

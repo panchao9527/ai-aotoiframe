@@ -267,7 +267,7 @@ def test_cli_overrides_settings_and_fixture_always_closes_session(monkeypatch):
     create = MagicMock(return_value=driver)
     monkeypatch.setattr(mobile_driver, "create_driver", create)
     load = MagicMock(return_value=android_caps())
-    monkeypatch.setattr(plugin, "load_capabilities", load)
+    monkeypatch.setattr(mobile_driver, "load_capabilities", load)
     events = []
     monkeypatch.setattr(plugin, "emit_event", lambda name, *args, **kwargs: events.append(name))
     settings = SimpleNamespace(
@@ -290,7 +290,7 @@ def test_cli_overrides_settings_and_fixture_always_closes_session(monkeypatch):
 def test_explicit_app_run_propagates_connection_failure(monkeypatch):
     create = MagicMock(side_effect=ConnectionError("Appium unreachable"))
     monkeypatch.setattr(mobile_driver, "create_driver", create)
-    monkeypatch.setattr(plugin, "load_capabilities", lambda *args: android_caps())
+    monkeypatch.setattr(mobile_driver, "load_capabilities", lambda *args: android_caps())
     events = []
     monkeypatch.setattr(plugin, "emit_event", lambda name, *args, **kwargs: events.append(name))
     settings = SimpleNamespace(

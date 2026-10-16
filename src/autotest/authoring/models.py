@@ -47,13 +47,15 @@ def workspace_path(name: str, root: Path | None = None) -> Path:
     return target
 
 
-def destination(path: str, kind: str) -> Path:
+def destination(path: str, kind: str, *, legacy: bool = False) -> Path:
     """生成器只能增加业务 Python；禁止借路径穿越覆盖配置、插件或其他目录。"""
     pure = PurePosixPath(path)
     if "\\" in path or ":" in path or pure.is_absolute() or ".." in pure.parts:
         raise AIError(f"非法草稿路径：{path}")
     layer = {"api": "api", "web": "web", "app": "mobile"}[kind]
-    allowed = (f"tests/{kind}/", f"src/autotest/{layer}/")
+    allowed = (f"tests/{kind}/", f"src/project_business/{layer}/")
+    if legacy:
+        allowed += (f"src/autotest/{layer}/",)  # 读取 0.1 任务；新任务不能再向底座写业务。
     if not path.startswith(allowed) or pure.suffix != ".py":
         raise AIError(f"草稿只允许写入 {allowed} 下的 Python 文件：{path}")
     # Windows 路径不区分大小写；每一段只用常见 Python 文件名，拒绝设备名/ADS。
@@ -93,7 +95,11 @@ def draft_files(workspace: Path, manifest: dict) -> list[tuple[str, Path]]:
         raise AIError("任务还没有草稿，请先 author generate --response 或 --send。")
     result = []
     for name in files:
-        path = workspace / "draft" / destination(name, manifest["kind"])
+        path = (
+            workspace
+            / "draft"
+            / destination(name, manifest["kind"], legacy=manifest.get("schema_version", 1) < 3)
+        )
         if path.resolve() != path or not path.is_file():
             raise AIError(f"草稿文件丢失或使用了符号链接：{name}")
         result.append((name, path))

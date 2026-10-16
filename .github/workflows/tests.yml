@@ -16,7 +16,19 @@ concurrency:
 
 jobs:
   demo-tests:
-    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            python: "3.11"
+          - os: ubuntu-24.04
+            python: "3.13"
+          - os: windows-latest
+            python: "3.11"
+          - os: macos-latest
+            python: "3.11"
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 20
     env:
       TEST_ENV: demo
@@ -30,7 +42,7 @@ jobs:
       - name: Set up uv and Python
         uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
         with:
-          python-version: "3.11"
+          python-version: ${{ matrix.python }}
           version: "latest-known"
           enable-cache: true
 
@@ -50,11 +62,14 @@ jobs:
       - name: Run unit, API and Web tests
         run: uv run --frozen python -m autotest run --suite all -- --env demo -n 2
 
+      - name: Verify fresh API-only company installation
+        run: uv run --frozen python scripts/verify_project.py
+
       - name: Upload reports and failure evidence
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
-          name: automation-${{ github.run_id }}-${{ github.run_attempt }}
+          name: automation-${{ matrix.os }}-${{ matrix.python }}-${{ github.run_id }}-${{ github.run_attempt }}
           path: artifacts/
           if-no-files-found: warn
           retention-days: 7

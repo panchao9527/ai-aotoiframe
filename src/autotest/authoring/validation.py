@@ -143,7 +143,9 @@ def validate(
             overlay = Path(temp)
             _copy_workspace(root, overlay)
             for relative, source in draft_files(workspace, manifest):
-                target = overlay / destination(relative, manifest["kind"])
+                target = overlay / destination(
+                    relative, manifest["kind"], legacy=manifest.get("schema_version", 1) < 3
+                )
                 target.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copy2(source, target)
             # 每次验证使用新目录，不能把上次通过的 execution.json 当成本次证据。
@@ -240,7 +242,9 @@ def promote(name: str, *, reviewed: bool = False) -> list[str]:
         raise AIError("当前草稿没有有效的执行通过记录；修改后需重新验证。")
     items = draft_files(workspace, manifest)
     for name, _ in items:
-        target = root / destination(name, manifest["kind"])
+        target = root / destination(
+            name, manifest["kind"], legacy=manifest.get("schema_version", 1) < 3
+        )
         if target.exists() or target.resolve() != target:
             raise AIError(f"目标已存在或路径含符号链接，未写入任何文件：{name}")
     if report.get("dependency_fingerprint") != dependency_fingerprint(root):
@@ -264,7 +268,9 @@ def promote(name: str, *, reviewed: bool = False) -> list[str]:
     written = []
     try:
         for name, source in items:
-            target = root / destination(name, manifest["kind"])
+            target = root / destination(
+                name, manifest["kind"], legacy=manifest.get("schema_version", 1) < 3
+            )
             target.parent.mkdir(parents=True, exist_ok=True)
             with target.open("x", encoding="utf-8") as stream:
                 written.append(target)

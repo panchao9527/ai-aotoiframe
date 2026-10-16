@@ -1,7 +1,9 @@
 """项目初始化与离线接入预检；不登录、不连接设备，也不输出凭据值。"""
 
 import argparse
+import json
 import re
+from pathlib import Path
 from urllib.parse import urlsplit
 
 import httpx
@@ -14,7 +16,6 @@ from autotest.config import (
     load_settings,
     load_web_storage_state,
 )
-from autotest.mobile.driver import load_capabilities
 from autotest.redaction import redact_text
 
 
@@ -84,6 +85,11 @@ def _capability(capabilities: dict, name: str) -> str:
 
 
 def _check_app(settings: Settings, args: argparse.Namespace) -> None:
+    try:
+        from autotest.mobile.driver import load_capabilities
+    except ModuleNotFoundError as exc:
+        raise ValueError("App 依赖未安装，请执行 uv sync --no-dev --extra app --frozen") from exc
+
     _reject_placeholder_url(settings.appium_server_url, "APPIUM_SERVER_URL / appium_server_url")
     platform = args.app_platform or settings.app_platform
     path = args.app_caps or settings.app_caps_file
@@ -131,6 +137,9 @@ def main(argv=None) -> int:
     init = sub.add_parser("init", help="生成可独立使用的 API / Web / App 公司项目")
     init.add_argument("--name", required=True, help="项目名称，使用小写英文、数字和短横线")
     init.add_argument("--output", required=True, help="新项目输出目录；不覆盖已有内容")
+    upgrade = sub.add_parser("upgrade", help="检查公司工程的框架升级；默认只预览")
+    upgrade.add_argument("--target", required=True, help="含 .qa-framework.json 的公司工程")
+    upgrade.add_argument("--apply", action="store_true", help="无冲突时应用全部公共文件更新")
     check = sub.add_parser("check", help="离线检查所选套件；不验证网络或真实设备")
     check.add_argument("--env", required=True)
     check.add_argument("--config-dir", default="configs/environments")
@@ -139,6 +148,17 @@ def main(argv=None) -> int:
     check.add_argument("--app-platform", choices=["android", "ios"])
     check.add_argument("--app-caps", help="覆盖 APP_CAPS_FILE 的 capabilities YAML 路径")
     args = parser.parse_args(argv)
+    if args.action == "upgrade":
+        from autotest.lifecycle import upgrade_project
+        from autotest.scaffold import _source_root
+
+        try:
+            report = upgrade_project(_source_root(), Path(args.target), apply=args.apply)
+            print(json.dumps(report, ensure_ascii=False, indent=2))
+            return 1 if report["conflicts"] else 0
+        except (ValueError, OSError) as exc:
+            print("[失败] " + _error_message(exc))
+            return 1
     if args.action == "init":
         from autotest.scaffold import init_project
 

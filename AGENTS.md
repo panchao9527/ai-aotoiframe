@@ -5,7 +5,8 @@ Appium Android/iOS。中文注释和 docs 面向刚开始写 Python 的测试工
 
 ## 修改时遵循的结构
 
-- 底层能力在 `src/autotest/`；业务用例在 `tests/api/`、`tests/web/`、`tests/app/`。
+- 底层能力在 `src/autotest/`；新业务对象在 `src/project_business/api/`、`web/`、`mobile/`；
+  业务用例在 `tests/api/`、`tests/web/`、`tests/app/`。已有对象维护保留兼容路径。
 - 元素定位集中在 Page/Screen 对象，业务断言保留在测试函数中。
 - 环境优先级：CLI 环境名 > TEST_ENV；系统变量 > .env > YAML > 默认值。
 - 练习系统用例标记 `demo`，公司用例不要加 `demo`。不要自动把公司环境换回 demo。
@@ -27,6 +28,10 @@ Appium Android/iOS。中文注释和 docs 面向刚开始写 Python 的测试工
 - API/Web/App/数据和关键业务步骤写入统一事件日志；业务用例用 `log_step` 记录少量关键阶段。
   不打印或记录密码、Token、Cookie、完整请求/响应正文、个人隐私和完整页面文本。
 - `.env`、真实账号、Token、App 包、报告不提交；新增配置同步更新示例和中文手册。
+- 项目导出只读取 `framework-assets.json`；新增公共文件显式登记，禁止将公司文件加入清单。
+- 公共升级按 `.qa-framework.json` 基线比较，先预览，冲突整批停止；不猜旧工程散列。
+- 维护已有用例可先用 `author impact --changed ...` 召回静态候选，再按证据确认范围；
+  `run --path ...` 保留报告与执行门禁，不以静态分析代替回归。
 
 ## 本地验证
 

@@ -17,12 +17,21 @@ from pathlib import Path
 from autotest.redaction import redact, redact_text
 
 
-def run_tests(suite: str, extra: list[str]) -> int:
+def run_tests(suite: str, extra: list[str], paths: list[str] | None = None) -> int:
     """一条命令生成 HTML、JUnit、Allure 原始数据与浏览器失败证据。"""
+    targets = paths or ["tests" if suite == "all" else f"tests/{suite}"]
+    if paths:
+        from autotest.lifecycle import safe_path
+
+        root = Path.cwd().resolve()
+        allowed = root / "tests" if suite == "all" else root / "tests" / suite
+        for selector in paths:
+            path = safe_path(root, selector.split("::", 1)[0])
+            if not path.is_relative_to(allowed) or not path.exists():
+                raise ValueError("--path 必须是所选 suite 内存在的测试文件或目录，可附 ::用例名")
     stamp = datetime.now(UTC).strftime("%Y%m%d-%H%M%S") + "-" + uuid.uuid4().hex[:6]
     destination = Path("artifacts") / stamp
     destination.mkdir(parents=True)
-    target = "tests" if suite == "all" else f"tests/{suite}"
     allow_empty = "--allow-empty" in extra
     extra = [arg for arg in extra if arg != "--allow-empty"]
     gate = (
@@ -32,16 +41,22 @@ def run_tests(suite: str, extra: list[str]) -> int:
         sys.executable,
         "-m",
         "pytest",
-        target,
+        *targets,
         f"--artifact-dir={destination}",
         f"--html={destination / 'report.html'}",
         "--self-contained-html",
         f"--junitxml={destination / 'junit.xml'}",
         f"--alluredir={destination / 'allure-results'}",
-        f"--output={destination / 'web'}",
-        "--tracing=retain-on-failure",
-        "--screenshot=only-on-failure",
-        "--video=retain-on-failure",
+        *(
+            [
+                f"--output={destination / 'web'}",
+                "--tracing=retain-on-failure",
+                "--screenshot=only-on-failure",
+                "--video=retain-on-failure",
+            ]
+            if importlib.util.find_spec("pytest_playwright")
+            else []
+        ),
         *gate,
         *extra,
     ]
@@ -95,16 +110,17 @@ def run_tests(suite: str, extra: list[str]) -> int:
     return exit_code
 
 
-def doctor() -> int:
+def doctor(suite: str = "all") -> int:
     """只读检查：不安装 SDK、不启动 Appium、不连接真实手机。"""
     checks = {
         "pytest": "pytest",
         "httpx": "httpx",
-        "playwright": "playwright",
-        "Appium-Python-Client": "appium",
-        "pytest-playwright": "pytest_playwright",
         "allure-pytest": "allure_pytest",
     }
+    if suite in {"web", "all"}:
+        checks.update({"playwright": "playwright", "pytest-playwright": "pytest_playwright"})
+    if suite in {"app", "all"}:
+        checks["Appium-Python-Client"] = "appium"
     missing = []
     print(f"Python: {sys.version.split()[0]} / {sys.executable}")
     for distribution, module in checks.items():
@@ -113,13 +129,14 @@ def doctor() -> int:
             print(f"[缺少] {distribution}")
         else:
             print(f"[OK] {distribution} {importlib.metadata.version(distribution)}")
-    if "playwright" not in missing:
+    if "playwright" in checks and "playwright" not in missing:
         from playwright.sync_api import sync_playwright
 
         with sync_playwright() as pw:
             installed = Path(pw.chromium.executable_path).is_file()
             print(f"[{'OK' if installed else '未安装'}] Chromium")
             if not installed:
+                missing.append("Chromium")
                 print("  Web 测试前运行：python -m playwright install chromium")
     for name in ("node", "npm", "npx", "adb", "java", "appium", "allure"):
         print(f"[可选工具] {name}: {shutil.which(name) or '未发现（仅相关功能需要）'}")
@@ -191,10 +208,17 @@ def main(argv: list[str] | None = None) -> int:
 
         return author_main(args)
     parser = argparse.ArgumentParser(description="Python 接口 / Web / App 自动化框架")
+    from autotest import __version__
+
+    parser.add_argument("--version", action="version", version=f"ai-aotoiframe {__version__}")
     sub = parser.add_subparsers(dest="command", required=True)
     run = sub.add_parser("run", help="运行测试并生成报告，-- 后可接 pytest 参数")
     run.add_argument("--suite", choices=["all", "unit", "api", "web", "app"], default="all")
-    sub.add_parser("doctor", help="只读检查 Python 依赖和可选工具")
+    run.add_argument(
+        "--path", action="append", help="只运行此测试路径/节点，可重复；保留报告与执行门禁"
+    )
+    diagnosis = sub.add_parser("doctor", help="只读检查所选端的依赖和可选工具")
+    diagnosis.add_argument("--suite", choices=["all", "api", "web", "app"], default="all")
     sub.add_parser("project", help="初始化公司项目和 API/Web/App 离线预检")
     sub.add_parser("browser", help="固定版本 Playwright CLI 页面探索入口")
     sub.add_parser("artemis", help="可选 ARTEMIS Android AI 探索入口")
@@ -215,9 +239,11 @@ def main(argv: list[str] | None = None) -> int:
         parser.error("未识别参数：" + " ".join(extra))
     try:
         if options.command == "run":
+            if options.path:
+                return run_tests(options.suite, extra, paths=options.path)
             return run_tests(options.suite, extra)
         if options.command == "doctor":
-            return doctor()
+            return doctor(options.suite)
         if options.command == "new":
             print(f"已创建：{new_test(options.kind, options.name, options.output)}")
             return 0

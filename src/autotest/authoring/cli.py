@@ -49,6 +49,9 @@ def main(argv: list[str] | None = None) -> int:
     adopt = actions.add_parser("promote", help="将已审查且当前内容验证通过的新增文件放入项目")
     adopt.add_argument("name")
     adopt.add_argument("--reviewed", action="store_true")
+    impact = actions.add_parser("impact", help="按本地变更路径生成已有用例的回归范围建议")
+    impact.add_argument("--changed", action="append", required=True, help="项目相对路径，可重复")
+    impact.add_argument("--output", help="可选：将范围建议保存到 artifacts/ 下的 JSON")
     record = roots.add_parser("record", help="人工录制入口")
     record.add_argument("kind", choices=("web", "app"))
     record.add_argument("--name", default="recording")
@@ -60,7 +63,21 @@ def main(argv: list[str] | None = None) -> int:
     evidence.add_argument("--output", required=True)
     args = parser.parse_args(argv)
     try:
-        if args.group == "evidence":
+        if args.group == "author" and args.action == "impact":
+            from autotest.authoring.impact import analyze_impact
+            from autotest.lifecycle import safe_path
+
+            root = project_root()
+            result = analyze_impact(root, args.changed)
+            text = json.dumps(result, ensure_ascii=False, indent=2)
+            if args.output:
+                output = safe_path(root, args.output)
+                if not output.is_relative_to(root / "artifacts") or output.suffix != ".json":
+                    raise AIError("范围建议输出需位于 artifacts/ 内，扩展名为 .json")
+                output.parent.mkdir(parents=True, exist_ok=True)
+                output.write_text(text + "\n", encoding="utf-8")
+            print(text)
+        elif args.group == "evidence":
             output = Path(args.output).resolve()
             allowed = project_root() / "artifacts"
             if not output.is_relative_to(allowed) or output.suffix != ".json":
@@ -146,6 +163,6 @@ def main(argv: list[str] | None = None) -> int:
         else:
             print("已新增：\n" + "\n".join(promote(args.name, reviewed=args.reviewed)))
         return 0
-    except (AIError, OSError, ValueError) as exc:
+    except (AIError, OSError, ValueError, SyntaxError) as exc:
         print("编写流程失败：" + redact_text(str(exc)), file=sys.stderr)
         return 1
