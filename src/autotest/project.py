@@ -137,13 +137,22 @@ def main(argv=None) -> int:
     init = sub.add_parser("init", help="生成可独立使用的 API / Web / App 公司项目")
     init.add_argument("--name", required=True, help="项目名称，使用小写英文、数字和短横线")
     init.add_argument("--output", required=True, help="新项目输出目录；不覆盖已有内容")
+    init.add_argument(
+        "--type",
+        dest="project_type",
+        choices=["api", "web", "app", "all"],
+        default="api",
+        help="默认生成独立 API 工程；all 保留三端组合",
+    )
     upgrade = sub.add_parser("upgrade", help="检查公司工程的框架升级；默认只预览")
     upgrade.add_argument("--target", required=True, help="含 .qa-framework.json 的公司工程")
     upgrade.add_argument("--apply", action="store_true", help="无冲突时应用全部公共文件更新")
     check = sub.add_parser("check", help="离线检查所选套件；不验证网络或真实设备")
     check.add_argument("--env", required=True)
     check.add_argument("--config-dir", default="configs/environments")
-    check.add_argument("--suite", choices=["api", "web", "app", "all"], default="api")
+    check.add_argument(
+        "--suite", choices=["api", "web", "app", "all"], help="默认检查工程所属端；框架源码默认 API"
+    )
     check.add_argument("--role", action="append", help="只检查指定 API 角色，可重复；默认全部角色")
     check.add_argument("--app-platform", choices=["android", "ios"])
     check.add_argument("--app-caps", help="覆盖 APP_CAPS_FILE 的 capabilities YAML 路径")
@@ -163,7 +172,7 @@ def main(argv=None) -> int:
         from autotest.scaffold import init_project
 
         try:
-            destination = init_project(args.name, args.output)
+            destination = init_project(args.name, args.output, project_type=args.project_type)
         except OSError:
             print("[失败] 无法创建项目目录，请检查输出路径与权限")
             return 1
@@ -171,8 +180,18 @@ def main(argv=None) -> int:
             print("[失败] " + redact_text(str(exc)))
             return 1
         print(f"[OK] 已创建独立测试项目：{destination}")
-        print("下一步：进入项目，按 README 配置环境、账号和设备，再执行 project check。")
+        print(
+            f"工程类型：{args.project_type}。下一步：进入项目，按 README 配置本端环境和所需资源。"
+        )
         return 0
+    from autotest.project_layout import read_project_type
+
+    try:
+        selected = read_project_type(Path.cwd())
+    except (OSError, ValueError) as exc:
+        print("[失败] " + _error_message(exc))
+        return 1
+    args.suite = args.suite or selected or "api"
     if args.role and args.suite not in {"api", "all"}:
         print("[失败] --role 仅适用于 --suite api 或 all")
         return 1
@@ -181,7 +200,8 @@ def main(argv=None) -> int:
     except (ValueError, OSError) as exc:
         print("[失败] " + _error_message(exc))
         return 1
-    suites = ["api", "web", "app"] if args.suite == "all" else [args.suite]
+    suite = selected if args.suite == "all" and selected in {"api", "web", "app"} else args.suite
+    suites = ["api", "web", "app"] if suite == "all" else [suite]
     checks = {"api": _check_api, "web": _check_web, "app": _check_app}
     failures = 0
     for suite in suites:

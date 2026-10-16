@@ -1,0 +1,62 @@
+// __PROJECT_TYPE__ 独立工程。节点需预装 Python 3.11/uv，设备节点需另备 SDK/Appium。
+pipeline {
+    agent { label "__AGENT__" }
+    parameters {
+        string(name: 'TEST_ENV', defaultValue: 'company_test', description: '公司环境 YAML，禁止 demo')
+        __PARAMETERS__
+        string(name: 'ENV_CREDENTIALS_ID', defaultValue: 'company-test-env', description: 'dotenv 格式 Secret file；可清空')
+    }
+    options {
+        timestamps()
+        timeout(time: 60, unit: 'MINUTES')
+        disableConcurrentBuilds()
+        skipDefaultCheckout(true)
+        buildDiscarder(logRotator(numToKeepStr: '20', artifactNumToKeepStr: '10'))
+    }
+    environment {
+        UV_PYTHON = '3.11'
+        PYTHONUTF8 = '1'
+    }
+    stages {
+        stage('Checkout') {
+            steps {
+                deleteDir()
+                checkout scm
+            }
+        }
+        stage('Install') {
+            steps {
+                sh 'uv sync --frozen'
+                __INSTALL_BROWSER__
+            }
+        }
+        stage('Preflight and test') {
+            steps {
+                script {
+                    def executeTests = {
+                        sh '''#!/usr/bin/env bash
+set -euo pipefail
+uv run --frozen python templates/company-ci/run_company_ci.py --env "$TEST_ENV" --suite __PROJECT_TYPE____APP_ARGS__
+'''
+                    }
+                    def withTestEnvironment = {
+                        if (params.ENV_CREDENTIALS_ID?.trim()) {
+                            withCredentials([file(credentialsId: params.ENV_CREDENTIALS_ID, variable: 'CI_ENV_FILE')]) {
+                                executeTests()
+                            }
+                        } else {
+                            executeTests()
+                        }
+                    }
+                    __EXECUTE__
+                }
+            }
+        }
+    }
+    post {
+        always {
+            junit testResults: 'artifacts/**/junit.xml', allowEmptyResults: true
+            archiveArtifacts artifacts: 'artifacts/**/*', allowEmptyArchive: true
+        }
+    }
+}

@@ -19,7 +19,14 @@ from autotest.redaction import redact, redact_text
 
 def run_tests(suite: str, extra: list[str], paths: list[str] | None = None) -> int:
     """一条命令生成 HTML、JUnit、Allure 原始数据与浏览器失败证据。"""
+    from autotest.project_layout import read_project_type
+
+    project_type = read_project_type(Path.cwd())
+    if suite == "all" and project_type in {"api", "web", "app"}:
+        suite = project_type
     targets = paths or ["tests" if suite == "all" else f"tests/{suite}"]
+    if suite == "all" and project_type == "all" and not paths:
+        targets = ["tests/api", "tests/web", "tests/app"]
     if paths:
         from autotest.lifecycle import safe_path
 
@@ -112,6 +119,11 @@ def run_tests(suite: str, extra: list[str], paths: list[str] | None = None) -> i
 
 def doctor(suite: str = "all") -> int:
     """只读检查：不安装 SDK、不启动 Appium、不连接真实手机。"""
+    from autotest.project_layout import read_project_type
+
+    selected = read_project_type(Path.cwd())
+    if suite == "all" and selected in {"api", "web", "app"}:
+        suite = selected
     checks = {
         "pytest": "pytest",
         "httpx": "httpx",

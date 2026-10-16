@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "qa-automation-starter"
-version = "0.2.0"
+version = "0.3.0"
 description = "面向新手、可迁移的接口 / Web / Android / iOS 自动化测试框架"
 readme = "README.md"
 requires-python = ">=3.11,<3.14"
@@ -31,6 +31,10 @@ artemis = [
 ]
 
 [dependency-groups]
+api = []
+web = ["pytest-playwright>=0.7,<1", "playwright>=1.51,<2"]
+app = ["Appium-Python-Client>=5.1,<7"]
+all = ["pytest-playwright>=0.7,<1", "playwright>=1.51,<2", "Appium-Python-Client>=5.1,<7"]
 # 默认源码开发体验保持三端齐全；--no-dev 让公司节点可以只安装所需端。
 dev = ["ruff>=0.11,<1", "pytest-playwright>=0.7,<1", "playwright>=1.51,<2", "Appium-Python-Client>=5.1,<7"]
 

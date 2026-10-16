@@ -706,7 +706,7 @@ wheels = [
 
 [[package]]
 name = "qa-automation-starter"
-version = "0.2.0"
+version = "0.3.0"
 source = { editable = "." }
 dependencies = [
     { name = "allure-pytest" },
@@ -739,11 +739,23 @@ web = [
 ]
 
 [package.dev-dependencies]
+all = [
+    { name = "appium-python-client" },
+    { name = "playwright" },
+    { name = "pytest-playwright" },
+]
+app = [
+    { name = "appium-python-client" },
+]
 dev = [
     { name = "appium-python-client" },
     { name = "playwright" },
     { name = "pytest-playwright" },
     { name = "ruff" },
+]
+web = [
+    { name = "playwright" },
+    { name = "pytest-playwright" },
 ]
 
 [package.metadata]
@@ -769,11 +781,22 @@ requires-dist = [
 provides-extras = ["web", "app", "all", "artemis"]
 
 [package.metadata.requires-dev]
+all = [
+    { name = "appium-python-client", specifier = ">=5.1,<7" },
+    { name = "playwright", specifier = ">=1.51,<2" },
+    { name = "pytest-playwright", specifier = ">=0.7,<1" },
+]
+api = []
+app = [{ name = "appium-python-client", specifier = ">=5.1,<7" }]
 dev = [
     { name = "appium-python-client", specifier = ">=5.1,<7" },
     { name = "playwright", specifier = ">=1.51,<2" },
     { name = "pytest-playwright", specifier = ">=0.7,<1" },
     { name = "ruff", specifier = ">=0.11,<1" },
+]
+web = [
+    { name = "playwright", specifier = ">=1.51,<2" },
+    { name = "pytest-playwright", specifier = ">=0.7,<1" },
 ]
 
 [[package]]

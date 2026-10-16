@@ -40,7 +40,7 @@ def _run(project, *args):
 
 
 def test_export_has_independent_assets_and_no_demo_business(tmp_path):
-    project = init_project("company-qa", tmp_path / "company")
+    project = init_project("company-qa", tmp_path / "company", project_type="all")
     assert (project / "uv.lock").read_bytes() == (ROOT / "uv.lock").read_bytes()
     assert (project / ".env.example").is_file()
     assert (project / "templates/company/.env.example").is_file()

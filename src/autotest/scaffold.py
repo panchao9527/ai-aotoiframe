@@ -3,10 +3,17 @@
 from __future__ import annotations
 
 import re
-import shutil
 from pathlib import Path
 
 from autotest.lifecycle import digest, read_catalog, write_state
+from autotest.project_layout import (
+    asset_bytes,
+    github_workflow,
+    include_template,
+    jenkins_pipeline,
+    template_text,
+    validate_type,
+)
 
 
 def _source_root() -> Path:
@@ -16,8 +23,9 @@ def _source_root() -> Path:
     return root
 
 
-def init_project(name: str, output: str | Path) -> Path:
+def init_project(name: str, output: str | Path, *, project_type: str = "api") -> Path:
     """保留锁文件与框架自测，替换业务入口；已有目录一律拒绝覆盖。"""
+    validate_type(project_type)
     if not re.fullmatch(r"[a-z][a-z0-9_-]{0,63}", name):
         raise ValueError("项目名以小写字母开头，只含小写字母、数字、_、-，最长 64 字符")
     if name.lower() in {
@@ -46,16 +54,29 @@ def init_project(name: str, output: str | Path) -> Path:
     for path in files:
         destination = target / path.relative_to(source)
         destination.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copyfile(path, destination)
+        destination.write_bytes(
+            asset_bytes(source, path.relative_to(source).as_posix(), project_type)
+        )
     for path in files:
         if not path.is_relative_to(source / "templates/company"):
             continue
         relative = path.relative_to(source / "templates/company")
+        if not include_template(relative, project_type):
+            continue
         destination = target / relative
         if destination.name.endswith(".tmpl"):
             destination = destination.with_suffix("")
         destination.parent.mkdir(parents=True, exist_ok=True)
-        content = path.read_text(encoding="utf-8").replace("__PROJECT_NAME__", name)
+        content = template_text(source, relative, name, project_type)
         destination.write_text(content, encoding="utf-8")
-    write_state(target, catalog, {name: digest(target / name) for name in catalog["managed"]})
+    workflow = target / ".github/workflows/company-tests.yml"
+    workflow.parent.mkdir(parents=True, exist_ok=True)
+    workflow.write_text(github_workflow(source, project_type), encoding="utf-8")
+    (target / "Jenkinsfile").write_text(jenkins_pipeline(source, project_type), encoding="utf-8")
+    write_state(
+        target,
+        catalog,
+        {name: digest(target / name) for name in catalog["managed"]},
+        project_type=project_type,
+    )
     return target

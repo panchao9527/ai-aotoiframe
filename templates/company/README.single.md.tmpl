@@ -1,0 +1,57 @@
+# __PROJECT_NAME__ · 独立 __PROJECT_TYPE__ 自动化工程
+
+本工程只包含 __PROJECT_TYPE__ 业务测试和对应业务对象，独立管理依赖、配置、报告与 CI。
+公共底座在 `src/autotest/`，本工程业务在 `src/project_business/__BUSINESS_LAYER__/`。
+Web/App 可通过公共 API 客户端和项目 fixture 准备数据，不需要另放一套 API 测试。
+
+## 1. 安装与配置
+
+Python 3.11 和 uv 准备好后，在**本工程目录**运行：
+
+```text
+uv sync --frozen
+__INSTALL_BROWSER__
+uv run --frozen qa doctor
+```
+
+普通 `uv sync` 只安装本工程需要的端依赖；无需配置其他端。
+复制 `.env.example` 为 `.env`，在 `configs/environments/company_test.yaml` 填写环境地址，
+在 `configs/business/smoke.yaml` 填写本端的具体业务预期。样板留空会明确失败。
+API 角色在 `configs/auth/company.yaml`，公开接口保留 `mode: none`；有鉴权时按注释配置。
+Web 登录态使用本地 `WEB_STORAGE_STATE` 或项目登录 fixture；App 需要明确设备、应用和
+Appium Server，Android/iOS 的设备配置分别在 `configs/devices/`（仅 App 工程生成）。
+账号、会话、安装包及报告不提交 Git。
+
+## 2. 独立执行
+
+```text
+uv run --frozen qa project check --env company_test --suite __PROJECT_TYPE__
+__RUN_COMMAND__
+```
+
+`qa run` / `qa run --suite all` 默认只运行本工程的业务端；`python -m pytest` 也默认只
+收集本端业务目录。框架单测从默认业务集合中分开。全跳过不算业务通过。
+App 用例必须带 `--run-app` 和设备配置；iOS 需选择 macOS 执行节点，设备串行使用。
+报告输出到本次 `artifacts/` 子目录；调试单个文件可用 `qa run --suite __PROJECT_TYPE__ --path 测试路径 -- --env company_test`。
+
+## 3. CI 与 GitHub
+
+已生成 `.github/workflows/company-tests.yml` 和根目录 `Jenkinsfile`，只提供本端执行入口。
+GitHub 工作流默认手工触发；先配置 Environment、vars/Secrets 和能访问公司环境的 runner。
+App 还需配置 Android/iOS 设备节点与共享设备锁。未配置前不代表公司 CI 已验收。
+参考 [公司 CI 配置](templates/company-ci/README.md)。
+
+本工程可以独立放入一个**公司批准的私有仓库**；也可与其他独立工程同仓管理。
+生成操作不会创建 GitHub 仓库、初始化 Git 或推送文件，不要向公共框架仓库上传公司代码。
+
+## 4. 维护与升级
+
+新增对象放 `src/project_business/__BUSINESS_LAYER__/`，测试放 `tests/__PROJECT_TYPE__/`，
+业务断言保留在测试中。新增用例使用 author 工作流；变更后可用 `author impact` 召回
+静态回归候选，再通过真实需求和运行证据确认范围。
+`.qa-framework.json` 保存工程类型和公共文件基线，随公司工程提交。
+在新版框架源码目录执行 `qa project upgrade --target 本工程目录` 预览，
+无冲突后加 `--apply`；升级保留本端默认依赖及执行范围，不覆盖公司测试和 CI。
+
+框架开发才需要 `uv sync --group dev --frozen`，再显式执行 `qa run --suite unit -- --env demo`。
+完整迁移、版本升级和验证边界见 [生命周期](docs/18-framework-lifecycle.md)。
