@@ -39,4 +39,5 @@ def test_recording_to_pom_in_isolated_project(tmp_path, monkeypatch):
     report = validate("web-flow", execute=True, environment="demo")
     assert report["passed"], (workspace / "validation.log").read_text(encoding="utf-8")
     assert report["counts"]["passed"] == 1
-    assert not (tmp_path / "src/autotest/web/contact_page.py").exists()
+    assert not (tmp_path / "src/project_business/web/contact_page.py").exists()
+    assert (workspace / "draft/src/project_business/web/contact_page.py").is_file()

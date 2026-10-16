@@ -42,12 +42,14 @@ flowchart TD
 ├── .env.example             # 环境变量示例，复制后填真实值
 ├── configs/
 │   └── environments/        # demo、test、staging 等环境的普通配置
-├── src/autotest/            # 可复用的框架代码
-│   ├── api/                 # 请求封装和接口业务对象
-│   ├── web/                 # 浏览器页面对象
-│   ├── mobile/              # App 驱动与页面对象
+├── src/autotest/            # 可复用的框架代码（含教学对象）
+│   ├── api/                 # 请求、标准鉴权与公共 API 能力
+│   ├── web/                 # 公共 Web 能力与教学对象
+│   ├── mobile/              # App 驱动与公共 Screen 基类
 │   ├── ai.py                # AI 命令和模型适配
 │   └── pytest_plugin.py     # 配置、fixture 和报告钩子
+├── src/project_business/    # 公司自己的 Service / Page / Screen
+├── .qa-framework.json       # 生成工程中的框架版本和公共资产基线
 ├── conftest.py              # 注册项目级 pytest 插件
 ├── tests/
 │   ├── unit/               # 框架自身的单元测试
@@ -61,7 +63,9 @@ flowchart TD
 └── Jenkinsfile             # Jenkins 流水线示例
 ```
 
-更精确的文件名称以当前仓库为准。框架底层常用工具放 `src/autotest/`，业务用例放 `tests/`。随着公司项目增多，可以逐步抽取公共包，第一次接入不用急着引入多个仓库。
+更精确的文件名称以当前仓库为准。底座放 `src/autotest/`，公司对象放 `src/project_business/`，
+业务用例放 `tests/`。公司 fixture、继承与组合负责扩展，公共底座通过版本和资产基线升级；
+无需第一天拆成多个仓库。操作见 [框架生命周期](18-framework-lifecycle.md)。
 
 ## 3. 四层分别写什么
 

@@ -14,5 +14,8 @@ qa evidence --run-dir ... --output artifacts/ai/triage.json。
 保留原始失败，不将 skip/xfail、删断言、扩大成功范围当作修复。
 
 按授权范围修改已有对象，检查 diff，先复跑失败用例，再跑受影响集合。
+可用 `qa author impact --changed 项目相对路径 --output artifacts/ai/impact.json` 召回静态候选；
+动态依赖与需求变化人工补充。用 `qa run --suite api/web/app --path 测试路径 -- --env 环境`
+执行精确范围并保留报告。公司对象在 `src/project_business/`，不向公共底座新增业务。
 新增对象前查已有签名；深入浏览器诊断时用 DevTools 网络/控制台。
 产品缺陷或证据不足时保留可复现结论，不无限自动修复。

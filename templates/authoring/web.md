@@ -15,5 +15,5 @@
 9. 长流程可用 `log_step` 记录登录后导航、提交、最终核对等业务阶段；页面点击细节由
    Playwright Trace 负责，不逐次重复记录，也不在步骤参数中保存输入的隐私内容。
 
-新对象放 src/autotest/web/<业务名>.py，测试与 fixture 放 tests/web/<name>/。
+新对象放 src/project_business/web/<业务名>.py，测试与 fixture 放 tests/web/<name>/。
 测试使用 pytest.mark.web；公司业务禁止 demo 标记。参考 tests/web/test_items.py。

@@ -124,7 +124,7 @@ def company_api(settings):
 
 ## 4. 把演示页面换成公司页面
 
-新增 `src/autotest/web/order_page.py`，将订单页面的定位器和操作放在里面。测试调用 `OrderPage` 并验证订单状态。先与研发约定稳定的 `data-testid`，减少 CSS 重构对测试的影响。
+新增 `src/project_business/web/order_page.py`，将订单页面的定位器和操作放在里面。测试调用 `OrderPage` 并验证订单状态。先与研发约定稳定的 `data-testid`，减少 CSS 重构对测试的影响。
 
 UI 测试准备复杂数据时，优先调用 API 造数；这样用例可以集中验证当前页面。只有“登录本身”是测试目标时才每次从 UI 登录；其他场景可以后续引入受控的登录状态复用，注意账号权限和会话过期。
 

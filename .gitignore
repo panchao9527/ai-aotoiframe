@@ -15,6 +15,7 @@ dist/
 !.env.example
 .auth/
 .secrets/
+.qa-framework.*.tmp
 playwright/.auth/
 *.pem
 *.key

@@ -36,7 +36,7 @@ FRAMEWORK_CONTEXT = """框架约定：Python 3.11+ / pytest。
 可用 pytest fixtures：api_client（同步 HTTPX 风格客户端）、base_url（Web 地址）、
 page（Playwright 同步 Page）、settings（当前环境配置）、app_driver（Appium WebDriver）。
 API 用 api_client.get/post 等；JSON 响应用 response.json()。
-Web 页面对象放在 autotest.web.pages；App 页面对象放在 autotest.mobile.screens。
+公司业务对象放在 project_business.api/web/mobile，公共 autotest 对象通过 import 复用。
 现有页面对象的具体类/方法签名未包含在输入时，不要凭空 import 未知类。
 优先语义定位 get_by_role/get_by_test_id；App 优先 accessibility id。
 禁止用 time.sleep 等固定等待处理元素同步；使用 Playwright expect 或 Appium 显式等待。

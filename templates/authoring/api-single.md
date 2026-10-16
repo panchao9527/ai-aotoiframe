@@ -16,4 +16,4 @@
   source 使用 context.materials 的键；仅依据源码时 basis="source"，不能写成需求验收。
 
 参考 tests/api/test_login.py、tests/api/test_items.py、autotest.api.services.ItemsService。
-对象已存在时 import 复用；确需新对象放 src/autotest/api/<业务名>.py。
+对象已存在时 import 复用；确需新对象放 src/project_business/api/<业务名>.py。

@@ -78,8 +78,8 @@ Android 和 iOS 仍需分两次验收。全跳过不算通过。仅调试单条�
 
 ## 4. 添加公司业务
 
-API 的 Service 在 `src/autotest/api/company_service.py`；Web 的 Page 在
-`src/autotest/web/company_page.py`；App 的 Screen 在 `src/autotest/mobile/company_screen.py`。
+API 的 Service 在 `src/project_business/api/company_service.py`；Web 的 Page 在
+`src/project_business/web/company_page.py`；App 的 Screen 在 `src/project_business/mobile/company_screen.py`。
 测试放 `tests/api/`、`tests/web/`、`tests/app/`，业务断言留在测试中。
 新增业务使用专属模块和 fixture，创建的数据及时通过 `data_factory` 登记清理。
 样板只覆盖首条只读/首屏检查，订单等流程应按真实需求增加断言和清理步骤。
@@ -87,6 +87,10 @@ API 的 Service 在 `src/autotest/api/company_service.py`；Web 的 Page 在
 [AI 编写流程](docs/09-authoring-workflows.md)可继续使用；草稿验证后再入库。
 复制的 `examples/` 是框架单测与学习材料，不在公司默认测试集合中。
 源码和文档均已复制，不依赖原电脑路径或原仓库虚拟环境。
+框架版本和公共文件基线在 `.qa-framework.json`，需随公司工程提交。
+升级前先提交公司改动，在新版框架源码根目录运行 `qa project upgrade --target 公司目录`
+检查差异，无冲突后加 `--apply`。公司对象、测试、环境和 README 保留；公共文件冲突整批停止。
+按端最小安装、旧工程迁移、静态影响分析及精准运行见 [生命周期手册](docs/18-framework-lifecycle.md)。
 `docs/` 保留完整框架参考，其中 demo 演示和原仓库 CI 步骤用于学习；
 公司业务安装与执行以本 README 为准，CI 使用下面的公司模板。
 

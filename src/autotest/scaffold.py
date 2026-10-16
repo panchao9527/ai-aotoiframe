@@ -6,39 +6,14 @@ import re
 import shutil
 from pathlib import Path
 
+from autotest.lifecycle import digest, read_catalog, write_state
+
 
 def _source_root() -> Path:
     root = Path(__file__).resolve().parents[2]
     if not (root / "uv.lock").is_file() or not (root / "templates/company").is_dir():
         raise ValueError("project init 需要源码仓库，请在克隆的 ai-aotoiframe 中执行")
     return root
-
-
-def _files(root: Path, folder: str, suffixes: set[str]) -> list[Path]:
-    directory = root / folder
-    if directory.resolve() != directory:
-        raise ValueError(f"项目模板不允许符号链接：{folder}")
-    result = []
-    for path in sorted(directory.rglob("*")):
-        if path.is_symlink() or path.resolve() != path:
-            raise ValueError(f"项目模板不允许符号链接：{path.relative_to(root)}")
-        if not _exportable(path, directory):
-            continue
-        if path.is_file() and (path.suffix in suffixes or path.name == "Jenkinsfile"):
-            result.append(path)
-    return result
-
-
-def _exportable(path: Path, root: Path) -> bool:
-    """模板也可能被本地编辑过，禁止把常见凭据、会话与缓存带出。"""
-    if any(
-        part in {".auth", ".secrets", ".git", ".venv", "__pycache__", "artifacts"}
-        for part in path.relative_to(root).parts
-    ):
-        return False
-    if path.name == ".env" or (path.name.startswith(".env.") and path.name != ".env.example"):
-        return False
-    return path.suffix not in {".pem", ".key", ".pfx", ".p12", ".apk", ".ipa", ".pyc"}
 
 
 def init_project(name: str, output: str | Path) -> Path:
@@ -62,35 +37,9 @@ def init_project(name: str, output: str | Path) -> Path:
     if target.is_relative_to(source):
         raise ValueError("输出目录必须在框架仓库外，例如 --output ../company-qa")
 
-    # 不复制整个工作区：.git、.env、现有公司配置、报告、安装包和缓存都不在名单中。
-    files = [
-        source / item
-        for item in (
-            "pyproject.toml",
-            "uv.lock",
-            ".python-version",
-            ".gitignore",
-            ".gitattributes",
-            "AGENTS.md",
-            ".playwright/cli.config.json",
-        )
-    ]
-    for folder, suffixes in (
-        ("src/autotest", {".py"}),
-        ("tests/unit", {".py"}),
-        ("docs", {".md"}),
-        ("templates", {".md", ".yaml", ".yml", ".py", ".tmpl", ".example", ".json"}),
-        ("examples", {".md", ".py", ".json"}),
-        (".agents/skills", {".md"}),
-    ):
-        files.extend(_files(source, folder, suffixes))
-    # demo 环境仅用于框架单测；不会带出演示业务测试和私人配置。
-    files.append(source / "configs/environments/demo.yaml")
-    # 框架单测需要演示角色文件；公司角色配置由模板另行生成。
-    files.append(source / "configs/auth/demo.yaml")
-    for path in files:
-        if not path.is_file() or path.is_symlink():
-            raise ValueError("框架源码资产不完整，请从完整源码仓库执行初始化")
+    # 精确清单替代目录扫描；本地临时公司模块、文档和模板不会被自动带出。
+    catalog = read_catalog(source)
+    files = [source / name for name in catalog["managed"] + catalog["bootstrap"]]
 
     target.parent.mkdir(parents=True, exist_ok=True)
     target.mkdir()  # 并发执行也不能覆盖已有项目。
@@ -98,7 +47,9 @@ def init_project(name: str, output: str | Path) -> Path:
         destination = target / path.relative_to(source)
         destination.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(path, destination)
-    for path in _files(source, "templates/company", {".md", ".yaml", ".tmpl", ".example", ".json"}):
+    for path in files:
+        if not path.is_relative_to(source / "templates/company"):
+            continue
         relative = path.relative_to(source / "templates/company")
         destination = target / relative
         if destination.name.endswith(".tmpl"):
@@ -106,4 +57,5 @@ def init_project(name: str, output: str | Path) -> Path:
         destination.parent.mkdir(parents=True, exist_ok=True)
         content = path.read_text(encoding="utf-8").replace("__PROJECT_NAME__", name)
         destination.write_text(content, encoding="utf-8")
+    write_state(target, catalog, {name: digest(target / name) for name in catalog["managed"]})
     return target

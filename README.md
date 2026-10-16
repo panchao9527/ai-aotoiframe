@@ -2,6 +2,8 @@
 
 项目仓库：[panchao9527/ai-aotoiframe](https://github.com/panchao9527/ai-aotoiframe)。
 本项目在 autoiframe 执行框架基础上增加 AI 编写、验证和维护工作流。
+定位是轻量、可迁移的 pytest 框架：公共底座负责执行，公司工程拥有业务对象和断言，
+AI 辅助整理材料与维护；完整说明见 [框架生命周期](docs/18-framework-lifecycle.md)。
 
 用一套 Python 项目管理 **接口、Web、Android 和 iOS 自动化测试**。适合先从本地示例学会，再迁移到公司的真实业务。每个目录都有明确职责，核心代码和示例用中文注释解释。
 
@@ -77,12 +79,22 @@ uv sync --frozen
 随后按端执行离线预检，例如 `uv run --frozen qa project check --env company_test --suite web`。
 详见 [新公司接入](docs/06-new-project.md)。
 
+生成工程的公司对象位于 `src/project_business/`，公共底座位于 `src/autotest/`。
+导出使用精确资产清单，版本和初始散列保存在 `.qa-framework.json`。
+在新版框架源码目录运行 `qa project upgrade --target ../company-qa` 预览升级，
+无冲突后加 `--apply` 应用；公司业务与配置保留，公共文件冲突时整批停止。
+旧版工程的迁移步骤、兼容范围与 [版本记录](CHANGELOG.md)见生命周期手册。
+
+默认安装包含完整开发依赖。API 执行节点可用 `uv sync --frozen --no-dev`，
+Web/App 节点分别加 `--extra web` / `--extra app`；安装 Web 依赖后仍需安装浏览器。
+
 API 支持 `API_CA_BUNDLE` 追加内部 CA、`API_TRUST_ENV=true` 显式启用环境代理；
 Web 支持 `WEB_STORAGE_STATE` 读取受控登录态文件。真实业务地址、断言和定位仍需按公司资料填写。
 
 ```powershell
 # 查看环境诊断与帮助。
 uv run python -m autotest doctor
+uv run qa doctor --suite api
 uv run python -m autotest --help
 
 # AI 页面探索：项目固定 CLI 版本，每个任务使用独立会话。
@@ -100,6 +112,12 @@ uv run python -m autotest project check --env test
 
 # 打开浏览器看测试过程。
 uv run python -m autotest run --suite web -- --headed --browser chromium
+
+# 只执行一个文件，保留报告和实际业务执行门禁。
+uv run qa run --suite api --path tests/api/test_items.py -- --env demo
+
+# 静态回归建议：不执行源码，动态依赖和外部需求变化需人工补充。
+uv run qa author impact --changed src/project_business/api/orders.py --output artifacts/ai/impact.json
 
 # 使用两个进程运行（真实项目先确保账号和测试数据相互独立）。
 uv run python -m autotest run --suite all -- -n 2
@@ -134,6 +152,7 @@ uv run python -m autotest demo --port 8765
 14. [ARTEMIS Android AI 探索](docs/14-artemis-integration.md)：独立部署、设备探索、MCP 与 Appium 回归边界。
 15. [统一运行日志与排查](docs/15-unified-logging.md)：事件字段、业务步骤、查询、脱敏和并行日志。
 16. [新公司三端接入验证](docs/16-company-ready-validation.md)：初始化、三端预检、企业配置与本轮验证范围。
+17. [框架生命周期](docs/18-framework-lifecycle.md)：业务边界、按端安装、版本升级、变更影响与维护。
 
 ## 维护约定
 

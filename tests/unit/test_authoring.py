@@ -138,6 +138,17 @@ def test_generated_paths_cannot_escape_business_layer(path):
         destination(path, "api")
 
 
+def test_new_business_paths_are_separate_and_old_tasks_remain_readable():
+    assert destination("src/project_business/web/orders.py", "web") == Path(
+        "src/project_business/web/orders.py"
+    )
+    with pytest.raises(AIError):
+        destination("src/autotest/web/orders.py", "web")
+    assert destination("src/autotest/web/orders.py", "web", legacy=True) == Path(
+        "src/autotest/web/orders.py"
+    )
+
+
 def test_whole_response_validated_before_any_draft_is_written(author_project):
     workspace = prepare_sample()
     payload = {
