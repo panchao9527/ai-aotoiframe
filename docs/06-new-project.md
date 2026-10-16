@@ -5,20 +5,22 @@
 ## 推荐入口：一条命令生成公司项目
 
 ```text
-uv run --frozen qa project init --name company-qa --output ../company-qa
+uv run --frozen qa project init --type api --name company-qa --output ../company-qa
 cd ../company-qa
 uv sync --frozen
 ```
 
 在生成项目中按 README 配置 `company_test.yaml`、`.env`、`configs/business/smoke.yaml`，
-然后分别运行 `qa project check --env company_test --suite api`、`--suite web`、`--suite app`。
-`--suite all` 会汇总三端配置问题；App 的 `--app-platform`、`--app-caps` 可覆盖 YAML。
+然后运行本端的 `qa project check --env company_test --suite api`。
+Web/App 工程分别通过 `--type web/app` 生成；需要三端组合时用 `--type all`。
+独立工程的 `--suite all` 只检查本端；组合工程才汇总三端问题。App 参数可覆盖 YAML。
 占位域名、缺少账号变量、无效 CA/登录态、未明确设备选择会在离线预检中失败。
 预检不会登录、操作页面或连接手机，不能替代真实测试。
 
-生成目录自带源码、锁文件、框架单测、业务 Service/Page/Screen 和 GitHub/Jenkins 模板。
+生成目录自带公共源码、锁文件、框架单测、本端业务对象以及独立 GitHub/Jenkins 入口。
 公司业务没有 demo 标记；默认环境为 `company_test`。未填业务冒烟预期时明确失败，
-App 未启用时跳过。`run --suite all` 要求 API/Web 分别实际执行，显式启用 App 后也检查 App。
+App 未启用时跳过且不能算业务通过。独立工程 `qa run` 默认只执行本端；
+组合工程 `run --suite all` 要求 API/Web 分别实际执行，显式启用 App 后也检查 App。
 Android/iOS 分别执行验收。`.env`、报告、Git 历史、原环境文件不随初始化复制。
 初始化只能用于完整源码仓库，拒绝覆盖现有目录。公司 CI 指南在生成项目的
 `templates/company-ci/README.md`。

@@ -1,6 +1,6 @@
 # 18 · 框架边界、升级与用例维护
 
-0.2 的定位是轻量、可迁移、由 AI 辅助编写的 pytest 框架。运行时仍是普通 Python；
+本框架定位是轻量、可迁移、由 AI 辅助编写的 pytest 框架。运行时仍是普通 Python；
 AI 整理材料、生成草稿和辅助诊断，业务预期由需求与契约定义。
 
 ## 1. 代码归属与扩展点
@@ -24,25 +24,28 @@ App 通过 capabilities 与 Screen 继承。创建数据后立即调用 `data_fa
 ## 2. 从新工程开始
 
 ```text
-uv run --frozen qa project init --name company-qa --output ../company-qa
+uv run --frozen qa project init --type api --name company-qa --output ../company-qa
 ```
 
 导出只读取 `framework-assets.json` 的精确文件清单。临时公司代码、文档和新模板不会
 因处于某个目录就被带出。公共文件的初始 SHA-256 与版本记录在 `.qa-framework.json`，
 该文件应提交到公司仓库；它只记录文件名和散列，不包含凭据。
 
-默认 `uv sync --frozen` 保留完整开发环境。只跑单端的执行节点可选择：
+0.3 起公司工程通过 `--type api/web/app/all` 选择类型（默认 API），普通
+`uv sync --frozen` 安装本端依赖，`qa run` / pytest 默认只运行本端业务。
+工程类型保存在版本记录，升级采用同一渲染规则，保留本端依赖和执行范围。
+源码框架仍默认完整开发依赖；需要临时补充其他端依赖时可显式选择：
 
 ```text
-uv sync --frozen --no-dev                 # API
-uv sync --frozen --no-dev --extra web     # API + Web
-uv sync --frozen --no-dev --extra app     # API + App
-uv sync --frozen --no-dev --extra all     # 三端执行依赖
+uv sync --frozen --extra web
+uv sync --frozen --extra app
+uv sync --frozen --group dev              # 完整框架开发环境
 ```
 
 安装 Web 依赖后仍需安装浏览器，App 仍需准备服务和明确设备。
 `qa doctor --suite api/web/app` 按端检查依赖；`qa project check --env ... --suite ...`
 检查离线配置；业务权限、登录有效性必须由真实用例确认。
+独立工程目录、CI 和 GitHub 分仓方式见 [独立工程指南](19-independent-projects.md)。
 
 ## 3. 升级已生成的工程
 

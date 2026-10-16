@@ -338,21 +338,21 @@ def test_init_dispatches_name_and_output_without_requiring_environment(
     calls = []
     fake = ModuleType("autotest.scaffold")
 
-    def create(name, output):
-        calls.append((name, output))
+    def create(name, output, *, project_type):
+        calls.append((name, output, project_type))
         return workspace / "new-project"
 
     fake.init_project = create
     monkeypatch.setitem(sys.modules, "autotest.scaffold", fake)
     assert project.main(["init", "--name", "company-qa", "--output", "new-project"]) == 0
-    assert calls == [("company-qa", "new-project")]
+    assert calls == [("company-qa", "new-project", "api")]
     assert "已创建独立测试项目" in capsys.readouterr().out
 
 
 def test_init_failure_returns_nonzero(workspace, monkeypatch, capsys):
     fake = ModuleType("autotest.scaffold")
 
-    def create(name, output):
+    def create(name, output, **kwargs):
         raise ValueError("输出目录已存在，不会覆盖")
 
     fake.init_project = create

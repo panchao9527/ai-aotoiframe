@@ -62,8 +62,8 @@ jobs:
       - name: Run unit, API and Web tests
         run: uv run --frozen python -m autotest run --suite all -- --env demo -n 2
 
-      - name: Verify fresh API-only company installation
-        run: uv run --frozen python scripts/verify_project.py
+      - name: Verify independent API Web App and combined projects
+        run: uv run --frozen python scripts/verify_project.py --all-types
 
       - name: Upload reports and failure evidence
         if: always()

@@ -8,6 +8,8 @@ import re
 import uuid
 from pathlib import Path, PurePosixPath
 
+from autotest.project_layout import asset_bytes, validate_type
+
 CATALOG = "framework-assets.json"
 STATE = ".qa-framework.json"
 MANAGED_ROOTS = (
@@ -83,12 +85,17 @@ def read_catalog(source: Path) -> dict:
     return data
 
 
-def write_state(target: Path, catalog: dict, files: dict[str, str]) -> None:
+def write_state(
+    target: Path, catalog: dict, files: dict[str, str], *, project_type: str | None = None
+) -> None:
     value = {
         "schema_version": 1,
         "framework_version": catalog["framework_version"],
         "files": files,
     }
+    validate_type(project_type)
+    if project_type is not None:
+        value["project_type"] = project_type
     path = safe_path(target, STATE)
     temporary = path.with_name(f"{STATE}.{uuid.uuid4().hex}.tmp")
     try:
@@ -114,7 +121,12 @@ def upgrade_project(source: Path, target: Path, *, apply: bool = False) -> dict:
     baseline = state.get("files")
     if state.get("schema_version") != 1 or not isinstance(baseline, dict):
         raise ValueError("目标框架版本记录无效")
-    upstream = {name: digest(source / name) for name in catalog["managed"]}
+    project_type = state.get("project_type")
+    validate_type(project_type)
+    upstream = {
+        name: hashlib.sha256(asset_bytes(source, name, project_type)).hexdigest()
+        for name in catalog["managed"]
+    }
     changes, conflicts, preserved = [], [], []
     for name in sorted(set(baseline) | set(upstream)):
         if not isinstance(name, str) or not _managed_name(name):
@@ -162,8 +174,8 @@ def upgrade_project(source: Path, target: Path, *, apply: bool = False) -> dict:
                 destination.unlink()
             else:
                 destination.parent.mkdir(parents=True, exist_ok=True)
-                destination.write_bytes((source / item["path"]).read_bytes())
-        write_state(target, catalog, upstream)
+                destination.write_bytes(asset_bytes(source, item["path"], project_type))
+        write_state(target, catalog, upstream, project_type=project_type)
     except (OSError, ValueError):
         for name, content in originals.items():
             path = target / name

@@ -68,16 +68,18 @@ uv run python -m autotest run --suite all
 ### 带到新公司：生成独立项目
 
 ```text
-uv run --frozen qa project init --name company-qa --output ../company-qa
-cd ../company-qa
+uv run --frozen qa project init --type api --name company-api --output ../company-api
+uv run --frozen qa project init --type web --name company-web --output ../company-web
+uv run --frozen qa project init --type app --name company-app --output ../company-app
+cd ../company-api
 uv sync --frozen
 ```
 
-按生成项目的 README 填写环境、角色鉴权、业务冒烟参数和设备配置。
-生成项目包含独立源码与锁文件、API/Web/App 分层样板、框架单测和公司 CI 模板，
-默认使用 `company_test`，输出目录必须是仓库外的新目录。
-随后按端执行离线预检，例如 `uv run --frozen qa project check --env company_test --suite web`。
-详见 [新公司接入](docs/06-new-project.md)。
+每条命令生成一个独立工程，仅包含所选端的业务样板、默认依赖和 CI 入口。
+默认类型为 API；需要三端组合时显式使用 `--type all`。公共执行底座仍在同一仓库维护，
+公司工程可分别放入独立私有仓库，也可同仓分目录。生成命令不会创建 GitHub 仓库或推送。
+按生成项目 README 填写本端配置，默认环境为 `company_test`，输出目录必须是仓库外的新目录。
+详见 [独立工程与 GitHub 组织](docs/19-independent-projects.md)。
 
 生成工程的公司对象位于 `src/project_business/`，公共底座位于 `src/autotest/`。
 导出使用精确资产清单，版本和初始散列保存在 `.qa-framework.json`。
@@ -85,8 +87,8 @@ uv sync --frozen
 无冲突后加 `--apply` 应用；公司业务与配置保留，公共文件冲突时整批停止。
 旧版工程的迁移步骤、兼容范围与 [版本记录](CHANGELOG.md)见生命周期手册。
 
-默认安装包含完整开发依赖。API 执行节点可用 `uv sync --frozen --no-dev`，
-Web/App 节点分别加 `--extra web` / `--extra app`；安装 Web 依赖后仍需安装浏览器。
+框架源码默认安装完整开发依赖；生成的公司工程普通 `uv sync --frozen` 只安装所选端依赖，
+`qa run` 和 pytest 默认只执行本工程业务。Web 仍需安装浏览器，App 仍需配置设备。
 
 API 支持 `API_CA_BUNDLE` 追加内部 CA、`API_TRUST_ENV=true` 显式启用环境代理；
 Web 支持 `WEB_STORAGE_STATE` 读取受控登录态文件。真实业务地址、断言和定位仍需按公司资料填写。
@@ -153,6 +155,7 @@ uv run python -m autotest demo --port 8765
 15. [统一运行日志与排查](docs/15-unified-logging.md)：事件字段、业务步骤、查询、脱敏和并行日志。
 16. [新公司三端接入验证](docs/16-company-ready-validation.md)：初始化、三端预检、企业配置与本轮验证范围。
 17. [框架生命周期](docs/18-framework-lifecycle.md)：业务边界、按端安装、版本升级、变更影响与维护。
+18. [独立工程与 GitHub 组织](docs/19-independent-projects.md)：三端分工程、独立 CI、数据准备与分仓选择。
 
 ## 维护约定
 

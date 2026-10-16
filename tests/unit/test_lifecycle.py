@@ -87,7 +87,7 @@ def test_write_error_rolls_back_files_and_keeps_version(projects, monkeypatch):
     (source / "src/autotest/a.py").write_text("new-a", encoding="utf-8")
     before = (target / STATE).read_bytes()
 
-    def fail(*args):
+    def fail(*args, **kwargs):
         raise OSError("disk full")
 
     monkeypatch.setattr("autotest.lifecycle.write_state", fail)
